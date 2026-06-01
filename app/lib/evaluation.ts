@@ -74,6 +74,18 @@ export type EvaluationResult = {
   warning?: string;
 };
 
+export type CustomOmrResult = {
+  score: number;
+  total: number;
+  accuracy: number;
+  correct: number;
+  wrong: number;
+  blank: number;
+  anomalies: string[];
+  subjectWise: { subject: string; score: number; total: number; accuracy: number }[];
+  items: OmrItem[];
+};
+
 export const answerKey = ["A", "B", "C", "D", "B", "A", "C", "D", "A", "B"];
 
 export const rubricBank: RubricPoint[] = [
@@ -243,6 +255,67 @@ export function evaluateLocally(student: Student, answerText = student.answerTex
   };
 }
 
+export function evaluateCustomOmr(answerKeyText: string, responseText: string): CustomOmrResult {
+  const key = parseAnswers(answerKeyText, answerKey);
+  const responses = parseAnswers(responseText, []);
+  const items = key.map((correct, index) => {
+    const selected = responses[index] || "-";
+    if (selected === "-") {
+      return { question: index + 1, selected, correct, score: 0, status: "blank" as const, confidence: 0.92 };
+    }
+    if (selected.includes("/") || selected.length > 1 || !["A", "B", "C", "D"].includes(selected)) {
+      return {
+        question: index + 1,
+        selected,
+        correct,
+        score: 0,
+        status: "anomaly" as const,
+        confidence: 0.45,
+        flag: `Q${index + 1} has an invalid, double, or unclear response`,
+      };
+    }
+    const isCorrect = selected === correct;
+    return {
+      question: index + 1,
+      selected,
+      correct,
+      score: isCorrect ? 4 : -1,
+      status: isCorrect ? "correct" as const : "wrong" as const,
+      confidence: isCorrect ? 0.96 : 0.88,
+    };
+  });
+  const score = items.reduce((sum, item) => sum + item.score, 0);
+  const total = key.length * 4;
+  const correct = items.filter((item) => item.status === "correct").length;
+  const wrong = items.filter((item) => item.status === "wrong").length;
+  const blank = items.filter((item) => item.status === "blank").length;
+  const anomalies = items.filter((item) => item.status === "anomaly").map((item) => item.flag || `Q${item.question} needs review`);
+
+  const subjectWise = ["Physics", "Chemistry", "Biology/Maths"].map((subject, groupIndex) => {
+    const group = items.filter((_, index) => index % 3 === groupIndex);
+    const groupScore = group.reduce((sum, item) => sum + item.score, 0);
+    const groupTotal = group.length * 4;
+    return {
+      subject,
+      score: groupScore,
+      total: groupTotal,
+      accuracy: group.length ? Math.round((group.filter((item) => item.status === "correct").length / group.length) * 100) : 0,
+    };
+  });
+
+  return {
+    score,
+    total,
+    accuracy: key.length ? Math.round((correct / key.length) * 100) : 0,
+    correct,
+    wrong,
+    blank,
+    anomalies,
+    subjectWise,
+    items,
+  };
+}
+
 export function rankStudents(results: { student: Student; result: EvaluationResult }[]) {
   return [...results]
     .sort((a, b) => b.result.score - a.result.score)
@@ -268,6 +341,16 @@ function buildOmr(answers: string[]): OmrItem[] {
       confidence: isCorrect ? 0.96 : 0.88,
     };
   });
+}
+
+function parseAnswers(text: string, fallback: string[]) {
+  const matches = text
+    .toUpperCase()
+    .split(/[\s,;|]+/)
+    .map((value) => value.replace(/^\d+[:.)-]?/, ""))
+    .filter(Boolean);
+  const answers = matches.length ? matches : fallback;
+  return answers.map((answer) => answer.trim());
 }
 
 function lexicalScore(text: string, keywords: string[]) {

@@ -1,6 +1,6 @@
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import AuthProvider from "./components/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,16 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const publishableKey =
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_ZHVtbXkuY2xlcmsuYWNjb3VudHMuZGV2JA";
-
   return (
-    <ClerkProvider publishableKey={publishableKey}>
       <html lang="en" className="dark">
         <body className="min-h-screen bg-background text-foreground antialiased">
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </body>
       </html>
-    </ClerkProvider>
   );
 }
