@@ -1,23 +1,23 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import { Inter } from "next/font/google";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import "./globals.css";
-import { ReactNode } from "react";
-import { Metadata } from "next";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PrepForge — JEE & NEET Preparation Platform",
+  title: "PrepForge - Faculty AI Evaluation Suite",
   description:
-    "Crack JEE and NEET with PrepForge. Access live sessions with IITians & AIIMSians, AI-powered doubt solving, mock tests, and chapter-wise notes — all in one place.",
-  keywords: ["JEE preparation", "NEET preparation", "IIT", "AIIMS", "JEE mains", "NEET 2024", "exam prep", "live doubt sessions"],
+    "A Clerk-secured faculty demo for JEE and NEET answer sheet evaluation, AI marks, feedback, OMR checking, and report generation.",
+  keywords: ["AI evaluation", "faculty portal", "JEE", "NEET", "OMR checking", "answer sheet evaluation"],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const publishableKey =
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_ZHVtbXkuY2xlcmsuYWNjb3VudHMuZGV2JA";
+
   return (
-    <ClerkProvider>
+    <ClerkProvider publishableKey={publishableKey}>
       <html lang="en" className="dark">
-        <body className={`${inter.className} min-h-screen bg-background text-foreground selection:bg-[#7C6FE0]/30 selection:text-[#F0F0F8] antialiased`}>
+        <body className="min-h-screen bg-background text-foreground antialiased">
           {children}
         </body>
       </html>

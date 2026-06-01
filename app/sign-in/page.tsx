@@ -4,8 +4,8 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <SignIn
-        afterSignInUrl="/welcome"
-        afterSignUpUrl="/welcome"
+        afterSignInUrl="/evaluate"
+        afterSignUpUrl="/evaluate"
       />
     </div>
   );

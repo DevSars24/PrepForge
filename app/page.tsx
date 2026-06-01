@@ -1,140 +1,193 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import Navbar from "@/components/Navbar";
+
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import {
-  Radio, BookOpen, Shield, Zap, Globe, BarChart3,
-  ArrowRight, Sparkles, CheckCircle2, Lock, Users, ChevronRight, GraduationCap,
-  Atom, Beaker, Calculator, Leaf, Brain, Trophy, FileText, CheckSquare, Star
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  Brain,
+  CheckCircle2,
+  ClipboardCheck,
+  FileBadge,
+  FileText,
+  GraduationCap,
+  ScanLine,
+  ShieldCheck,
+  Sparkles,
+  Upload,
 } from "lucide-react";
 
-// Animation helpers
-const fw = (d = 0): any => ({
-  initial: { opacity: 0, y: 20 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-50px" },
-  transition: { duration: 0.6, delay: d, ease: [0.16, 1, 0.3, 1] },
-});
+const demoSteps = [
+  { icon: GraduationCap, title: "Faculty Login", text: "Clerk-secured access for verified college faculty and exam teams." },
+  { icon: Upload, title: "Upload Answer Sheet", text: "Drop handwritten PDFs, scanned answer sheets, or class bundles." },
+  { icon: FileText, title: "Upload Model Answer", text: "Attach the marking scheme, rubric, and official solution key." },
+  { icon: Brain, title: "AI Marks Generate", text: "Gemini-powered rubric scoring with retrieval-backed evidence checks." },
+  { icon: ClipboardCheck, title: "Feedback Generate", text: "Personalized improvement notes for JEE and NEET students." },
+  { icon: ScanLine, title: "OMR Checking", text: "Static demo flow for MCQ bubble checking, accuracy, and penalties." },
+  { icon: FileBadge, title: "Student Report PDF", text: "Investor-ready report preview with marks, feedback, and topic gaps." },
+];
+
+const metrics = [
+  ["3 min", "evaluation turnaround"],
+  ["7-step", "faculty workflow"],
+  ["JEE/NEET", "demo-ready streams"],
+  ["0 DB", "static investor demo"],
+];
 
 export default function LandingPage() {
-  const router = useRouter();
-
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-[#040508] text-[#F0F0F8] overflow-x-hidden font-sans relative">
-        {/* Ambient Background Image */}
-        <div
-          className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: "url('/assets/main-page.jpg')",
-            opacity: 0.40,
-            filter: "brightness(0.8) contrast(1.05)",
-          }}
-        />
-        {/* Radial vignette mask */}
-        <div className="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(4,5,8,0.15)_0%,rgba(4,5,8,0.75)_45%,#040508_95%)]" />
+      <main className="min-h-screen overflow-x-hidden bg-[#05070A] text-[#F6F7FB]">
+        <section className="relative px-6 pb-20 pt-32 md:pb-28 md:pt-44">
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_15%,rgba(20,184,166,0.22),transparent_30%),radial-gradient(circle_at_82%_20%,rgba(244,114,182,0.18),transparent_30%),linear-gradient(135deg,#05070A_0%,#0B1014_45%,#06110F_100%)]" />
+          <div
+            className="absolute inset-0 -z-10 opacity-[0.08]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px)",
+              backgroundSize: "46px 46px",
+            }}
+          />
 
-        {/* ════════════ HERO SECTION ════════════ */}
-        <section className="relative pt-32 pb-24 md:pt-52 md:pb-40 px-6 max-w-[1400px] mx-auto flex flex-col lg:flex-row items-center gap-20">
-          {/* Background glows */}
-          <div className="absolute top-[10%] left-[20%] w-[600px] h-[600px] bg-[#7868b8]/15 blur-[150px] rounded-full pointer-events-none" />
-          <div className="absolute top-[30%] right-[10%] w-[500px] h-[500px] bg-[##7C6FE0]/10 blur-[150px] rounded-full pointer-events-none" />
+          <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.02fr_.98fr]">
+            <div>
+              <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-teal-200">
+                <Sparkles size={14} />
+                Faculty AI Evaluation Suite
+              </div>
 
-          {/* Left Text */}
-          <div className="flex-1 z-10 text-center lg:text-left relative">
-            <motion.div {...fw(0)} className="mb-8 inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0F1120]/90 border border-[#7C6FE0]/30 text-[#A89FF5] text-xs font-medium tracking-wide backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7C6FE0] opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7C6FE0]" />
-              </span>
-              Next-gen AI evaluations for JEE & NEET
-            </motion.div>
+              <h1 className="max-w-4xl text-5xl font-black leading-[1.02] tracking-tight text-white md:text-7xl">
+                PrepForge for college answer sheet evaluation.
+              </h1>
 
-            <motion.h1 {...fw(0.1)} className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold text-white tracking-tight leading-[1.05] mb-8 drop-shadow-[0_4px_24px_rgba(8,10,18,0.85)]">
-              Crack JEE &amp; NEET <br className="hidden lg:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#7C6FE0] via-[#A89FF5] to-[#7C6FE0] bg-[length:200%_auto] animate-[gradientShift_8s_ease_infinite] drop-shadow-[0_2px_12px_rgba(124,111,224,0.35)]">
-                with precision.
-              </span>
-            </motion.h1>
+              <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
+                A sharp demo for investors and institutions: faculty login, answer sheet upload,
+                model answer upload, AI marks, feedback, OMR checking, and student report PDFs.
+              </p>
 
-            <motion.p {...fw(0.2)} className="text-lg md:text-xl text-[#8B8FA8] mb-12 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
-              PrepForge offers AI-powered OMR grading, descriptive answer evaluation, and expert faculty audits to ensure your preparation is flawless.
-            </motion.p>
+              <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+                <Link
+                  href="/evaluate"
+                  className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-teal-300 px-7 text-sm font-black text-[#04100E] shadow-[0_18px_60px_rgba(45,212,191,0.24)] transition hover:bg-teal-200"
+                >
+                  Open Faculty Demo <ArrowRight size={17} />
+                </Link>
+                <Link
+                  href="#workflow"
+                  className="inline-flex h-13 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-7 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.07]"
+                >
+                  View Workflow
+                </Link>
+              </div>
+            </div>
 
-            <motion.div {...fw(0.3)} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-5">
-              <button onClick={() => router.push("/welcome")} className="relative group overflow-hidden px-10 py-4 rounded-full bg-gradient-to-r from-[#7C6FE0] to-[#8B7FE8] text-white font-semibold tracking-wide transition-all hover:scale-[1.02] border border-white/10 hover:border-white/30 shadow-[0_0_30px_rgba(124,111,224,0.35)] hover:shadow-[0_0_50px_rgba(124,111,224,0.65)] cursor-pointer">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#8B7FE8] to-[#7C6FE0] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <span className="relative z-10 flex items-center gap-2">Start Evaluating Free <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" /></span>
-              </button>
-            </motion.div>
-          </div>
+            <div className="rounded-[2rem] border border-white/10 bg-[#08100F]/88 p-5 shadow-2xl backdrop-blur">
+              <div className="rounded-3xl border border-white/10 bg-[#0B1514] p-5">
+                <div className="flex items-center justify-between border-b border-white/10 pb-5">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-200">Live Demo</p>
+                    <h2 className="mt-1 text-xl font-black text-white">Class XII Mock Test</h2>
+                  </div>
+                  <div className="rounded-xl bg-emerald-400/15 px-3 py-2 text-xs font-black text-emerald-200">
+                    Ready
+                  </div>
+                </div>
 
-          <motion.div {...fw(0.4)} className="flex-1 w-full max-w-2xl lg:max-w-none relative z-10">
-            <div className="rounded-2xl bg-[#0A0B16]/90 border border-[#14172B] p-8 shadow-2xl border-t-2 border-t-[#7C6FE0]">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-[#7C6FE0]/10 rounded-xl text-[#7C6FE0]"><FileText size={24} /></div>
-                <div>
-                  <h3 className="font-bold">Instant Evaluation Ready</h3>
-                  <p className="text-xs text-[#8B8FA8]">Upload your OMR or handwritten notes</p>
+                <div className="mt-5 grid gap-3">
+                  {[
+                    ["Answer sheets", "42 PDFs uploaded", "100%"],
+                    ["Model answer", "Rubric parsed", "96%"],
+                    ["OMR scan", "180 bubbles checked", "91%"],
+                    ["Report PDF", "3 student reports queued", "Ready"],
+                  ].map(([label, detail, value]) => (
+                    <div key={label} className="rounded-2xl border border-white/8 bg-white/[0.035] p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-bold text-white">{label}</p>
+                          <p className="mt-1 text-xs text-slate-400">{detail}</p>
+                        </div>
+                        <span className="text-sm font-black text-teal-200">{value}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-pink-300/15 bg-pink-300/8 p-4">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="text-pink-200" size={20} />
+                    <p className="text-sm font-bold text-white">RAG guardrails active</p>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-slate-400">
+                    Marks and feedback are constrained to uploaded answer context, model answer,
+                    rubric, and OMR key. Low confidence returns a review warning.
+                  </p>
                 </div>
               </div>
-              <div className="h-4 bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-[#7C6FE0] w-[65%]" />
-              </div>
             </div>
-          </motion.div>
+          </div>
         </section>
 
-        {/* ════════════ FEATURES GRID ════════════ */}
-        <section id="features" className="relative py-24 px-6 bg-[#020305]">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                { icon: <CheckSquare />, title: "OMR Evaluation", desc: "Upload your OMR sheets and get instant scores, rank predictions, and accuracy analysis." },
-                { icon: <FileText />, title: "Descriptive Assessment", desc: "AI-driven grading for subjective answers with step-by-step logic and concept verification." },
-                { icon: <Zap />, title: "Real-time Feedback", desc: "Know exactly which step you missed in a complex JEE derivation." },
-              ].map((f, i) => (
-                <div key={i} className="p-8 rounded-3xl border border-[#14172B] bg-[#0F1120] hover:border-[#7C6FE0]/30 transition-all">
-                  <div className="text-[#7C6FE0] mb-4">{f.icon}</div>
-                  <h3 className="text-xl font-bold mb-2">{f.title}</h3>
-                  <p className="text-[#8B8FA8] text-sm">{f.desc}</p>
+        <section className="border-y border-white/8 bg-[#07100F] px-6 py-8">
+          <div className="mx-auto grid max-w-7xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {metrics.map(([value, label]) => (
+              <div key={label} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
+                <p className="text-2xl font-black text-white">{value}</p>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="workflow" className="px-6 py-20">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-teal-200">Bas ye enough hai</p>
+                <h2 className="mt-3 text-3xl font-black text-white md:text-5xl">Investor-ready workflow</h2>
+              </div>
+              <p className="max-w-xl text-sm leading-6 text-slate-400">
+                The app is intentionally static for now: no database dependency, just Clerk auth,
+                upload previews, Gemini evaluation, OMR simulation, and PDF-ready report UI.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {demoSteps.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <div key={step.title} className="rounded-2xl border border-white/8 bg-[#0A1110] p-6 transition hover:border-teal-300/30">
+                    <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-300/12 text-teal-200">
+                      <Icon size={21} />
+                    </div>
+                    <h3 className="text-lg font-black text-white">{step.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">{step.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-6 pb-20">
+          <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-3">
+            {[
+              { icon: BadgeCheck, title: "College Demo", text: "Show full evaluation journey without needing backend setup." },
+              { icon: BarChart3, title: "Faculty Control", text: "Marks, confidence, topic gaps, class rank, and report actions in one console." },
+              { icon: CheckCircle2, title: "Future Features", text: "Database, real OCR, bulk PDF export, audit logs, and institutional dashboards can come next." },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="rounded-2xl border border-white/8 bg-white/[0.03] p-6">
+                  <Icon className="mb-4 text-pink-200" size={24} />
+                  <h3 className="text-lg font-black text-white">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">{item.text}</p>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </section>
-
-        {/* ════════════ FACULTY EVALUATION ════════════ */}
-        <section className="py-24 px-6 relative">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-block p-4 rounded-full bg-[#7C6FE0]/10 text-[#7C6FE0] mb-6">
-              <Star size={32} />
-            </div>
-            <h2 className="text-4xl font-bold mb-6">Expert Faculty Audit</h2>
-            <p className="text-[#8B8FA8] mb-12">Beyond AI, get your complex assignments and full-length papers manually reviewed by subject experts who have mentored hundreds of JEE/NEET rankers.</p>
-            <div className="bg-[#0A0B16] border border-[#14172B] p-10 rounded-3xl text-left flex items-center gap-8">
-              <div className="text-sm font-mono text-[#7C6FE0]">"Personalized guidance that AI can't touch."</div>
-              <button className="px-6 py-3 rounded-full border border-white/10 hover:bg-white/5">Request Review</button>
-            </div>
-          </div>
-        </section>
-
-        {/* ════════════ FOOTER ════════════ */}
-        <footer className="pt-16 pb-8 px-6 border-t border-slate-800/50">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-slate-800/50">
-              <p className="text-xs text-slate-500">© 2025 PrepForge. All rights reserved.</p>
-              <div className="flex gap-6 text-xs text-slate-500">
-                <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
-                <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
-                <Link href="#" className="hover:text-white transition-colors">Contact</Link>
-              </div>
-            </div>
-          </div>
-        </footer>
-
       </main>
     </>
   );

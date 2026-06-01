@@ -20,7 +20,7 @@ export default function NewBlogPage() {
     const [viewMode, setViewMode] = useState<ViewMode>("meta");
 
     const [title, setTitle] = useState("");
-    const [content, setContent] = useState("# Start writing your DSA guide...");
+    const [content, setContent] = useState("# Start writing your faculty evaluation guide...");
     const [imageUrl, setImageUrl] = useState("");
     const [source, setSource] = useState("");
     const [pattern, setPattern] = useState("");
