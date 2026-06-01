@@ -39,7 +39,12 @@ ${JSON.stringify(localResult, null, 2)}
         model: "gemini-1.5-flash",
         generationConfig: { temperature: 0 },
       });
-      const result = await model.generateContent(prompt);
+      const result = await Promise.race([
+        model.generateContent(prompt),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("Gemini evaluation timed out")), 8000);
+        }),
+      ]);
 
       return Response.json({
         ...localResult,
