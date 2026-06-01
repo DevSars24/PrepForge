@@ -1,135 +1,114 @@
 "use client";
 
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen } from "lucide-react";
-import { useState, useEffect } from "react";
-import { SignedIn, SignedOut, UserButton, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { BrainCircuit, FileBadge, Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
-const NAV_LINKS = [
-  { label: "How It Works", href: "#features" },
-  { label: "Resources", href: "/blogs" },
-  { label: "Toppers", href: "/leaderboard" },
-  { label: "Live Sessions", href: "/sessions" },
+const navLinks = [
+  { label: "Workflow", href: "/#workflow" },
+  { label: "Faculty Demo", href: "/evaluate" },
+  { label: "Future Features", href: "/#workflow" },
 ];
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${scrolled ? "py-3" : "py-6"
-        }`}
-    >
+    <header className={`fixed inset-x-0 top-0 z-50 transition-all ${scrolled ? "py-3" : "py-5"}`}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div
-          className={`rounded-full flex items-center justify-between h-14 px-6 transition-all duration-500 ${scrolled
-            ? "bg-[#040508]/80 border border-[#14172B] backdrop-blur-2xl shadow-xl"
-            : "bg-transparent border border-transparent"
-            }`}
-          style={{ boxShadow: scrolled ? "0 8px 40px rgba(0,0,0,0.7)" : "none" }}
-        >
-          {/* ── PrepForge Brand ── */}
-          <Link href="/" className="flex items-center gap-2.5 group select-none">
-            <div className="w-8 h-8 rounded-full bg-[#0A0B16] border border-[#7C6FE0]/30 text-[#7C6FE0] flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:border-[#7C6FE0]/65 group-hover:bg-[#7C6FE0]/10 shadow-[0_0_15px_rgba(124,111,224,0.15)]">
-              <BookOpen size={15} strokeWidth={2.5} className="text-[#7C6FE0] group-hover:rotate-12 transition-transform duration-350" />
+        <div className="flex h-14 items-center justify-between rounded-2xl border border-white/10 bg-[#06100F]/82 px-4 shadow-2xl backdrop-blur-xl sm:px-5">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-300 text-[#04100E]">
+              <BrainCircuit size={19} strokeWidth={2.5} />
             </div>
-            <span className="text-xl font-extrabold tracking-tighter text-white">
-              Prep<span className="text-[#7C6FE0]">Forge</span>
+            <span className="text-lg font-black tracking-tight text-white">
+              Prep<span className="text-teal-200">Forge</span>
             </span>
           </Link>
 
-          {/* ── Desktop links ── */}
-          <nav className="hidden md:flex items-center gap-8">
-            {NAV_LINKS.map(({ label, href }) => (
+          <nav className="hidden items-center gap-7 md:flex">
+            {navLinks.map((link) => (
               <Link
-                key={label}
-                href={href}
-                className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400 hover:text-white transition-colors duration-300 relative group"
+                key={link.label}
+                href={link.href}
+                className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 transition hover:text-white"
               >
-                {label}
-                <span className="absolute -bottom-0.5 left-0 w-0 h-[1px] bg-[#7C6FE0] group-hover:w-full transition-all duration-300" />
+                {link.label}
               </Link>
             ))}
           </nav>
 
-          {/* ── Auth CTA (desktop) ── */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden items-center gap-3 md:flex">
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="text-[11px] font-semibold uppercase tracking-widest text-[#8B8FA8] hover:text-white transition-colors cursor-pointer">
-                  Sign In
+                <button className="rounded-xl border border-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-teal-300/40 hover:bg-teal-300/10">
+                  Faculty Login
                 </button>
               </SignInButton>
-              <SignUpButton mode="modal">
-                <Button className="h-9 px-6 rounded-full bg-[#7C6FE0] hover:bg-[#8E82E9] text-white text-xs font-bold tracking-wide shadow-[0_0_20px_rgba(124,111,224,0.25)] hover:shadow-[0_0_30px_rgba(124,111,224,0.5)] transition-all cursor-pointer">
-                  Start Free
-                </Button>
-              </SignUpButton>
             </SignedOut>
             <SignedIn>
+              <Link
+                href="/evaluate"
+                className="inline-flex items-center gap-2 rounded-xl bg-teal-300 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#04100E] transition hover:bg-teal-200"
+              >
+                <FileBadge size={14} />
+                Console
+              </Link>
               <UserButton />
             </SignedIn>
           </div>
 
-          {/* ── Hamburger ── */}
           <button
-            className="md:hidden p-2 text-slate-400 hover:text-white transition-colors"
-            onClick={() => setIsOpen((v) => !v)}
-            aria-label="Toggle menu"
+            aria-label="Toggle navigation"
+            onClick={() => setOpen((value) => !value)}
+            className="rounded-xl border border-white/10 p-2 text-white md:hidden"
           >
-            {isOpen ? <X size={20} /> : <Menu size={20} />}
+            {open ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
 
-        {/* ── Mobile menu ── */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              key="mobile-menu"
-              initial={{ opacity: 0, y: -12, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.97 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-3 rounded-2xl p-6 flex flex-col gap-5 border border-[#1C1F35] bg-[#0F1120]/95 backdrop-blur-2xl shadow-2xl"
-            >
-              {NAV_LINKS.map(({ label, href }) => (
+        {open && (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-[#06100F]/95 p-4 shadow-2xl backdrop-blur-xl md:hidden">
+            <div className="grid gap-2">
+              {navLinks.map((link) => (
                 <Link
-                  key={label}
-                  href={href}
-                  onClick={() => setIsOpen(false)}
-                  className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8B8FA8] hover:text-white transition-colors"
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-3 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-300 hover:bg-white/[0.05]"
                 >
-                  {label}
+                  {link.label}
                 </Link>
               ))}
-              <div className="h-px bg-white/5" />
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-[#8B8FA8] hover:text-white cursor-pointer">
-                    Sign In
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <Button className="w-full h-11 rounded-full bg-[#7C6FE0] hover:bg-[#8E82E9] text-white font-bold cursor-pointer">
-                    Start Free
-                  </Button>
-                </SignUpButton>
-              </SignedOut>
-              <SignedIn>
-                <UserButton />
-              </SignedIn>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <div className="mt-2 border-t border-white/10 pt-3">
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <button className="w-full rounded-xl bg-teal-300 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-[#04100E]">
+                      Faculty Login
+                    </button>
+                  </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                  <div className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-3">
+                    <Link href="/evaluate" onClick={() => setOpen(false)} className="text-xs font-black uppercase tracking-[0.16em] text-teal-200">
+                      Open Console
+                    </Link>
+                    <UserButton />
+                  </div>
+                </SignedIn>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
