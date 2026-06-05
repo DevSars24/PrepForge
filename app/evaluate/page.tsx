@@ -50,6 +50,9 @@ export default function EvaluatePage() {
   const [answerFiles, setAnswerFiles] = useState<UploadedFile[]>([]);
   const [criteriaFiles, setCriteriaFiles] = useState<UploadedFile[]>([]);
   const [omrFiles, setOmrFiles] = useState<UploadedFile[]>([]);
+  const [answerFileRefs, setAnswerFileRefs] = useState<File[]>([]);
+  const [omrFileRefs, setOmrFileRefs] = useState<File[]>([]);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
   const [omrKeyText, setOmrKeyText] = useState(answerKey.join(" "));
   const [omrResponseText, setOmrResponseText] = useState(selectedStudent.omr.join(" "));
   const [loading, setLoading] = useState(false);
@@ -78,29 +81,68 @@ export default function EvaluatePage() {
 
   const runDescriptive = async () => {
     setLoading(true);
+    setStatusNote(null);
     try {
       const local = evaluateLocally(selectedStudent, `${answerText}\n${markingCriteria}`);
       setResult(local);
-      const res = await fetch("/api/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student: selectedStudent, answerText: `${answerText}\n${markingCriteria}` }),
-      });
-      if (res.ok) setResult((await res.json()) as EvaluationResult);
+
+      const form = new FormData();
+      form.append("student", JSON.stringify(selectedStudent));
+      form.append("answerText", answerText);
+      form.append("rubricText", markingCriteria);
+      answerFileRefs.forEach((file) => form.append("answerFiles", file));
+
+      const res = await fetch("/api/evaluate", { method: "POST", body: form });
+      const data = (await res.json()) as EvaluationResult & { warning?: string; error?: string };
+      if (!res.ok) {
+        setStatusNote(data.error || "Evaluation failed. Showing local fallback.");
+        return;
+      }
+      setResult(data);
+      if (data.warning) setStatusNote(data.warning);
+      else if (answerFileRefs.length) setStatusNote("Answer sheet processed with Gemini Vision OCR + AI grading.");
+      else setStatusNote("AI grading complete (Gemini).");
       setWorkspace("insights");
     } finally {
       setLoading(false);
     }
   };
 
-  const runOmr = () => {
-    setOmrResult(evaluateCustomOmr(omrKeyText, omrResponseText));
-    setWorkspace("omr");
+  const runOmr = async () => {
+    setLoading(true);
+    setStatusNote(null);
+    try {
+      const form = new FormData();
+      form.append("answerKey", omrKeyText);
+      form.append("responses", omrResponseText);
+      omrFileRefs.forEach((file) => form.append("omrFiles", file));
+
+      const res = await fetch("/api/omr", { method: "POST", body: form });
+      const data = (await res.json()) as CustomOmrResult & { error?: string; visionUsed?: boolean; parsedResponses?: string };
+      if (!res.ok) {
+        setOmrResult(evaluateCustomOmr(omrKeyText, omrResponseText));
+        setStatusNote(data.error || "OMR API failed. Used manual text fallback.");
+        setWorkspace("omr");
+        return;
+      }
+      if (data.parsedResponses) setOmrResponseText(data.parsedResponses);
+      setOmrResult(data);
+      setStatusNote(data.visionUsed ? "OMR sheet read with Gemini Vision." : "OMR scored from text responses.");
+      setWorkspace("omr");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const addFiles = (files: FileList | null, setter: React.Dispatch<React.SetStateAction<UploadedFile[]>>) => {
+  const addFiles = (
+    files: FileList | null,
+    setter: React.Dispatch<React.SetStateAction<UploadedFile[]>>,
+    refSetter?: React.Dispatch<React.SetStateAction<File[]>>
+  ) => {
     if (!files) return;
-    setter((prev) => [...prev, ...Array.from(files).map((file) => ({ name: file.name, size: file.size, type: file.type || "file" }))]);
+    const list = Array.from(files);
+    setter((prev) => [...prev, ...list.map((file) => ({ name: file.name, size: file.size, type: file.type || "file" }))]);
+    refSetter?.((prev) => [...prev, ...list]);
   };
 
   const downloadReport = () => {
@@ -136,7 +178,12 @@ export default function EvaluatePage() {
 
       <div className="mx-auto grid max-w-7xl gap-6 px-5 py-7 md:px-8 lg:grid-cols-[300px_1fr]">
         <aside className="space-y-4">
-          <Panel icon={ShieldCheck} title="Faculty Evaluation" text="Runs locally without database or Clerk credentials. Add real Clerk keys later for protected faculty login." />
+          <Panel icon={ShieldCheck} title="Faculty Evaluation" text="Powered by free Gemini API: Vision OCR for answer sheets & OMR, RAG rubric grading, structured marks and feedback. Add GEMINI_API_KEY in .env to enable." />
+          {statusNote && (
+            <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+              {statusNote}
+            </div>
+          )}
           <StudentPicker stream={stream} selected={selectedStudent} onSelect={selectStudent} />
           <nav className="grid gap-2">
             {[
@@ -159,8 +206,8 @@ export default function EvaluatePage() {
           {workspace === "descriptive" && (
             <div className="grid gap-6 xl:grid-cols-2">
               <FeatureCard icon={Upload} title="Scanned answer sheets or images">
-                <UploadDrop inputId="answer-files" onAdd={(files) => addFiles(files, setAnswerFiles)} />
-                <FileList files={answerFiles} onRemove={(index) => setAnswerFiles((prev) => prev.filter((_, i) => i !== index))} />
+                <UploadDrop inputId="answer-files" onAdd={(files) => addFiles(files, setAnswerFiles, setAnswerFileRefs)} />
+                <FileList files={answerFiles} onRemove={(index) => { setAnswerFiles((prev) => prev.filter((_, i) => i !== index)); setAnswerFileRefs((prev) => prev.filter((_, i) => i !== index)); }} />
                 <Editor label="OCR transcript / typed answer" value={answerText} onChange={setAnswerText} minHeight="min-h-[250px]" />
               </FeatureCard>
               <FeatureCard icon={FileText} title="Predefined marking criteria">
@@ -178,11 +225,12 @@ export default function EvaluatePage() {
           {workspace === "omr" && (
             <div className="grid gap-6 xl:grid-cols-[390px_1fr]">
               <FeatureCard icon={ScanLine} title="Answer key and OMR sheets">
-                <UploadDrop inputId="omr-files" onAdd={(files) => addFiles(files, setOmrFiles)} />
-                <FileList files={omrFiles} onRemove={(index) => setOmrFiles((prev) => prev.filter((_, i) => i !== index))} />
+                <UploadDrop inputId="omr-files" onAdd={(files) => addFiles(files, setOmrFiles, setOmrFileRefs)} />
+                <FileList files={omrFiles} onRemove={(index) => { setOmrFiles((prev) => prev.filter((_, i) => i !== index)); setOmrFileRefs((prev) => prev.filter((_, i) => i !== index)); }} />
                 <Editor label="Answer key" value={omrKeyText} onChange={setOmrKeyText} minHeight="min-h-[90px]" />
                 <Editor label="Student OMR responses" value={omrResponseText} onChange={setOmrResponseText} minHeight="min-h-[90px]" />
-                <button onClick={runOmr} className="mt-4 w-full rounded-xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950">
+                <button onClick={runOmr} disabled={loading} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-60">
+                  {loading ? <Loader2 className="animate-spin" size={16} /> : <ScanLine size={16} />}
                   Check OMR Sheet
                 </button>
               </FeatureCard>

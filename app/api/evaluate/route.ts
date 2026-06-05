@@ -1,69 +1,92 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { gradeWithGemini, mapAiGradingToResult, ocrAnswerSheets } from "@/lib/ai-grading";
+import { saveEvaluationRecord } from "@/lib/evaluation-store";
+import { fileToBase64, hasGeminiKey } from "@/lib/gemini";
 import { evaluateLocally, students, type Student } from "@/lib/evaluation";
+import { uploadEvaluationFile } from "@/lib/supabase";
 
-type RequestBody = {
-  student?: Student;
-  answerText?: string;
-};
+async function parseRequest(req: Request) {
+  const contentType = req.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await req.formData();
+    const studentRaw = form.get("student");
+    const student = studentRaw ? (JSON.parse(String(studentRaw)) as Student) : students[0];
+    const answerText = String(form.get("answerText") || "");
+    const rubricText = String(form.get("rubricText") || "");
+    const files = form.getAll("answerFiles").filter((item): item is File => item instanceof File);
+    return { student, answerText, rubricText, files };
+  }
+
+  const body = (await req.json()) as {
+    student?: Student;
+    answerText?: string;
+    rubricText?: string;
+  };
+
+  return {
+    student: body.student || students[0],
+    answerText: body.answerText || "",
+    rubricText: body.rubricText || "",
+    files: [] as File[],
+  };
+}
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as RequestBody;
-    const student = body.student || students[0];
-    const localResult = evaluateLocally(student, body.answerText || student.answerText);
+    const { student, answerText: inputText, rubricText, files } = await parseRequest(req);
+    let answerText = inputText || student.answerText;
+    let ocrUsed = false;
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!hasGeminiKey()) {
+      const local = evaluateLocally(student, `${answerText}\n${rubricText}`);
       return Response.json({
-        ...localResult,
-        warning: "GEMINI_API_KEY is not configured. Local no-database evaluator returned deterministic output.",
+        ...local,
+        warning: "GEMINI_API_KEY is not configured. Get a free key at https://aistudio.google.com/apikey",
       });
     }
 
-    const prompt = `
-You are PrepForge Faculty Evaluation AI for JEE/NEET.
-You must use only this local evaluation JSON and the cited rubric evidence.
-Do not add new facts, marks, sources, or topics.
-Write a concise faculty audit note with:
-1. Final score
-2. Step-wise grading rationale
-3. OMR anomalies
-4. Topic gaps and next NCERT practice
-
-Evaluation JSON:
-${JSON.stringify(localResult, null, 2)}
-`.trim();
-
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        generationConfig: { temperature: 0 },
-      });
-      const result = await Promise.race([
-        model.generateContent(prompt),
-        new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error("Gemini evaluation timed out")), 8000);
-        }),
-      ]);
-
-      return Response.json({
-        ...localResult,
-        aiText: result.response.text()?.trim(),
-      });
-    } catch (geminiError) {
-      console.error("Gemini evaluation guardrail failed:", geminiError);
-      return Response.json({
-        ...localResult,
-        warning: "Gemini call failed, so PrepForge returned the deterministic no-database evaluation.",
-      });
+    if (files.length) {
+      const images = await Promise.all(files.map((file) => fileToBase64(file)));
+      const ocrText = await ocrAnswerSheets(images);
+      answerText = [ocrText, answerText].filter(Boolean).join("\n\n");
+      ocrUsed = true;
     }
+
+    const { grading, retrievalStage } = await gradeWithGemini({
+      student,
+      answerText,
+      rubricText: rubricText || "Award step-wise marks for JEE/NEET descriptive answers.",
+      stream: student.stream,
+    });
+
+    const result = mapAiGradingToResult(grading, student, {
+      retrievalStage,
+      ocrUsed,
+    });
+
+    const fileUrls = (
+      await Promise.all(files.map((file) => uploadEvaluationFile(file, "answer-sheets")))
+    ).filter((url): url is string => Boolean(url));
+
+    const saved = await saveEvaluationRecord({
+      student,
+      answerText,
+      rubricText,
+      result,
+      fileUrls,
+    });
+
+    return Response.json({
+      ...result,
+      savedId: saved?.id,
+      fileUrls,
+    });
   } catch (error) {
-    console.error("Evaluation API Error:", error);
-    return Response.json(
-      {
-        error: "Evaluation failed",
-      },
-      { status: 500 }
-    );
+    console.error("Evaluation API error:", error);
+    const local = evaluateLocally(students[0]);
+    return Response.json({
+      ...local,
+      warning: error instanceof Error ? `Gemini evaluation failed: ${error.message}` : "Gemini evaluation failed. Returned local fallback.",
+    });
   }
 }

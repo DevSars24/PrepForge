@@ -49,3 +49,32 @@ model LiveSession {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model EvaluationRecord {
+  id          String   @id @default(uuid())
+  studentName String
+  studentRoll String
+  stream      String
+  subject     String
+  mode        String   @default("descriptive")
+  answerText  String   @db.Text
+  rubricText  String?  @db.Text
+  score       Int
+  total       Int
+  confidence  Float
+  resultJson  Json
+  fileUrls    String[] @default([])
+  createdAt   DateTime @default(now())
+}
+
+model OmrRecord {
+  id         String   @id @default(uuid())
+  answerKey  String   @db.Text
+  responses  String   @db.Text
+  score      Int
+  total      Int
+  accuracy   Float
+  resultJson Json
+  fileUrls   String[] @default([])
+  createdAt  DateTime @default(now())
+}
