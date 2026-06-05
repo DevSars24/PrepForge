@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -10,6 +10,7 @@ import {
   Download,
   FileBadge,
   FileText,
+  History,
   Loader2,
   MessageSquareText,
   ScanLine,
@@ -32,7 +33,7 @@ import {
   type UploadedFile,
 } from "@/lib/evaluation";
 
-type Workspace = "descriptive" | "omr" | "insights" | "report";
+type Workspace = "descriptive" | "omr" | "insights" | "report" | "history";
 
 const criteriaText = `Step marking criteria:
 1. Award marks only when the student's written step matches a rubric point.
@@ -58,6 +59,93 @@ export default function EvaluatePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<EvaluationResult>(() => evaluateLocally(selectedStudent));
   const [omrResult, setOmrResult] = useState<CustomOmrResult>(() => evaluateCustomOmr(answerKey.join(" "), selectedStudent.omr.join(" ")));
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch("/api/evaluations");
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryItems(data.records || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  useEffect(() => {
+    if (workspace === "history") {
+      fetchHistory();
+    }
+  }, [workspace]);
+
+  const deleteItem = async (id: string, type: string) => {
+    try {
+      const res = await fetch("/api/evaluations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, type }),
+      });
+      if (res.ok) {
+        setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+      } else {
+        alert("Failed to delete history item");
+      }
+    } catch (error) {
+      console.error("Failed to delete:", error);
+    }
+  };
+
+  const clearHistory = async () => {
+    if (!confirm("Are you sure you want to clear all history?")) return;
+    try {
+      const res = await fetch("/api/evaluations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clearAll: true }),
+      });
+      if (res.ok) {
+        setHistoryItems([]);
+      } else {
+        alert("Failed to clear history");
+      }
+    } catch (error) {
+      console.error("Failed to clear history:", error);
+    }
+  };
+
+  const loadHistoryItem = (item: any) => {
+    if (item.type === "descriptive") {
+      const student = item.resultJson.student || {
+        name: item.title.replace(/\s*\(NEET\)|\s*\(JEE\)/g, ""),
+        roll: item.subtitle.split(" - Roll: ").pop() || "",
+        stream: item.title.includes("NEET") ? "NEET" : "JEE",
+        subject: item.subtitle.split(" - Roll: ")[0] || "",
+        answerText: item.resultJson.answerText || "",
+        omr: [],
+      };
+      setSelectedRoll(student.roll);
+      setAnswerText(item.resultJson.answerText || "");
+      setMarkingCriteria(item.resultJson.rubricText || criteriaText);
+      setResult(item.resultJson);
+      setStatusNote(`Loaded descriptive evaluation for ${student.name} from history.`);
+      setWorkspace("insights");
+    } else {
+      setOmrKeyText(item.resultJson.answerKey || "");
+      setOmrResponseText(item.resultJson.responses || "");
+      setOmrResult(item.resultJson);
+      setStatusNote(`Loaded OMR evaluation from history.`);
+      setWorkspace("omr");
+    }
+  };
 
   const streamStudents = students.filter((student) => student.stream === stream);
   const ranked = useMemo(
@@ -102,6 +190,7 @@ export default function EvaluatePage() {
       if (data.warning) setStatusNote(data.warning);
       else if (answerFileRefs.length) setStatusNote("Answer sheet processed with Gemini Vision OCR + AI grading.");
       else setStatusNote("AI grading complete (Gemini).");
+      fetchHistory();
       setWorkspace("insights");
     } finally {
       setLoading(false);
@@ -128,6 +217,7 @@ export default function EvaluatePage() {
       if (data.parsedResponses) setOmrResponseText(data.parsedResponses);
       setOmrResult(data);
       setStatusNote(data.visionUsed ? "OMR sheet read with Gemini Vision." : "OMR scored from text responses.");
+      fetchHistory();
       setWorkspace("omr");
     } finally {
       setLoading(false);
@@ -191,6 +281,7 @@ export default function EvaluatePage() {
               ["omr", "OMR Evaluation", ScanLine],
               ["insights", "Gaps and Patterns", BarChart3],
               ["report", "Reports", FileBadge],
+              ["history", "Evaluation History", History],
             ].map(([id, label, Icon]) => (
               <button key={id as string} onClick={() => setWorkspace(id as Workspace)} className={`flex items-center gap-3 rounded-xl border p-3 text-left text-sm font-bold ${workspace === id ? "border-teal-300 bg-teal-300/10 text-white" : "border-white/10 bg-black/25 text-slate-400"}`}>
                 <Icon size={16} />
@@ -258,6 +349,63 @@ export default function EvaluatePage() {
                 </button>
               </FeatureCard>
             </div>
+          )}
+
+          {workspace === "history" && (
+            <FeatureCard icon={History} title="Evaluation History Log">
+              <div className="mb-4 flex justify-between items-center flex-wrap gap-2">
+                <p className="text-xs text-slate-400">
+                  Recent descriptive and OMR grading sessions stored in the workspace history.
+                </p>
+                {historyItems.length > 0 && (
+                  <button onClick={clearHistory} className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/25">
+                    Clear All History
+                  </button>
+                )}
+              </div>
+
+              {loadingHistory ? (
+                <div className="flex h-40 items-center justify-center">
+                  <Loader2 className="animate-spin text-teal-300" size={24} />
+                </div>
+              ) : historyItems.length === 0 ? (
+                <div className="rounded-xl border border-white/10 bg-black/25 p-8 text-center text-slate-500">
+                  No evaluation history found. Run descriptive or OMR grading to save records.
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {historyItems.map((item) => (
+                    <div key={item.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.type === "descriptive" ? "bg-teal-300/10 text-teal-300" : "bg-amber-300/10 text-amber-300"}`}>
+                          {item.type === "descriptive" ? <Brain size={18} /> : <ScanLine size={18} />}
+                        </span>
+                        <div>
+                          <p className="font-bold text-sm text-white">{item.title}</p>
+                          <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
+                          <p className="mt-1 text-[10px] text-slate-500">{new Date(item.createdAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm font-black text-teal-300">{item.score}/{item.total}</p>
+                          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{item.type}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => loadHistoryItem(item)} className="rounded-lg bg-teal-300 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-teal-200">
+                            Load
+                          </button>
+                          <button onClick={() => deleteItem(item.id, item.type)} className="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-500/35 border border-rose-500/20">
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </FeatureCard>
           )}
         </section>
       </div>

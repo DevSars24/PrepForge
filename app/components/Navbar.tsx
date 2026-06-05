@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import { BookOpen, FileBadge, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -55,28 +54,13 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-4 md:flex">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-[11px] font-black uppercase tracking-[0.22em] text-[#9A9EAF] transition hover:text-white">
-                  Sign In
-                </button>
-              </SignInButton>
-              <SignInButton mode="modal">
-                <button className="rounded-full bg-[#7C6FE0] px-5 py-2.5 text-xs font-black text-white shadow-[0_0_30px_rgba(124,111,224,0.38)] transition hover:bg-[#9386FF]">
-                  Start Free
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <Link
-                href="/evaluate"
-                className="inline-flex items-center gap-2 rounded-full bg-[#7C6FE0] px-5 py-2.5 text-xs font-black text-white shadow-[0_0_30px_rgba(124,111,224,0.38)] transition hover:bg-[#9386FF]"
-              >
-                <FileBadge size={14} />
-                Console
-              </Link>
-              <UserButton />
-            </SignedIn>
+            <Link
+              href="/evaluate"
+              className="inline-flex items-center gap-2 rounded-full bg-[#7C6FE0] px-5 py-2.5 text-xs font-black text-white shadow-[0_0_30px_rgba(124,111,224,0.38)] transition hover:bg-[#9386FF]"
+            >
+              <FileBadge size={14} />
+              Faculty Console
+            </Link>
           </div>
 
           <button
@@ -102,21 +86,14 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="border-t border-white/10 pt-3">
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="w-full rounded-full bg-[#7C6FE0] px-5 py-3 text-xs font-black text-white">
-                      Start Free
-                    </button>
-                  </SignInButton>
-                </SignedOut>
-                <SignedIn>
-                  <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-3">
-                    <Link href="/evaluate" onClick={() => setOpen(false)} className="text-xs font-black uppercase tracking-[0.18em] text-[#A89FF5]">
-                      Open Console
-                    </Link>
-                    <UserButton />
-                  </div>
-                </SignedIn>
+                <Link
+                  href="/evaluate"
+                  onClick={() => setOpen(false)}
+                  className="flex w-full justify-center items-center gap-2 rounded-full bg-[#7C6FE0] px-5 py-3 text-xs font-black text-white shadow-[0_0_30px_rgba(124,111,224,0.38)] hover:bg-[#9386FF]"
+                >
+                  <FileBadge size={14} />
+                  Faculty Console
+                </Link>
               </div>
             </div>
           </div>
