@@ -1,250 +1,258 @@
-# PrepForge — Faculty AI Evaluation Suite (Comprehensive Codebase Guide)
+# PrepForge — Faculty AI Evaluation Suite (Exhaustive Developer & Architecture Guide)
 
-PrepForge is a professional AI-assisted grading suite tailored for competitive exams like **JEE (Joint Entrance Examination)** and **NEET (National Eligibility cum Entrance Test)**. It automates step-wise grading of descriptive answers, audits OMR sheets, identifies student learning gaps, and generates college-ready performance reports.
+PrepForge is a professional, production-ready AI-assisted grading suite engineered for JEE and NEET descriptive evaluation and OMR verification. It operates in both **Local Demo Mode** (with file-system fallback) and **Production Database Mode** (using PostgreSQL via Prisma).
 
-This document serves as an exhaustive, file-by-file architectural manual. We break down every active file in the repository, explaining its purpose, inner logic, data structures, and how they interact.
-
----
-
-## Technical Stack Architecture
-
-PrepForge is built as a lightweight, optimized Next.js 16 app with the following stack:
-- **Framework:** Next.js 16 (App Router) with React 19.
-- **Styling:** Tailwind CSS 4 with custom variables configured in `app/globals.css`.
-- **Database ORM:** Prisma ORM, targeting PostgreSQL in production and falling back to a clean local JSON store (`prisma/local_history.json`) for local setups.
-- **AI Engine:** Google Gemini SDK (`@google/generative-ai`), utilising `gemini-1.5-flash` for multi-modal text and vision processing, and `text-embedding-004` for semantic search.
-- **Scanned File Storage:** Supabase Storage (`@supabase/supabase-js`) to host and retrieve scanned sheet images.
+This document provides a highly detailed, file-by-file walkthrough of the entire project codebase. Every active file is mapped out, explaining its **role**, **exact logic**, **libraries used**, **data structures**, and **internal mechanics**.
 
 ---
 
-## Architectural Data Flow
+## 1. Directory Structure at a Glance
 
 ```
-+-----------------------------------------------------------------------------+
-|                                FACULTY CONSOLE                              |
-|                          (app/evaluate/page.tsx UI)                         |
-+-----------------------------------------------------------------------------+
-       |                                     |                         |
-       | 1. POST Descriptive Request         | 2. POST OMR Request     | 3. Manage History
-       v                                     v                         v
-+-----------------------------+       +-------------------+    +--------------------+
-|   /api/evaluate/route.ts    |       |  /api/omr/route.ts|    |  /api/evaluations  |
-+-----------------------------+       +-------------------+    +--------------------+
-       |                  |                    |       |                  |
-       | (OCR & RAG)      | (Store record)     | (OCR) | (Store OMR)      | (List/Delete)
-       v                  v                    v       v                  v
-+--------------+   +----------------+   +------------+ +----------------------------+
-|  ai-grading  |   |evaluation-store|   | ai-grading | |      evaluation-store      |
-|     .ts      |   |      .ts       |   |    .ts     | |            .ts             |
-+--------------+   +----------------+   +------------+ +----------------------------+
-       |                  |                            |                  |
-       v (Embed/Flash)    v (DB or JSON)               v (Flash JSON)     v (DB or JSON)
-+--------------+   +----------------+                  +--------+  +----------------+
-|  gemini.ts   |   | PostgreSQL/    |                  |gemini.ts| | PostgreSQL/    |
-| (API Client) |   | local_history  |                  +--------+  | local_history  |
-+--------------+   +----------------+                              +----------------+
+PrepForge/
+├── app/                        # Next.js 16 App Router Root
+│   ├── api/                    # Server-side API Endpoints
+│   │   ├── evaluate/           # Core Descriptive Grading API
+│   │   ├── evaluations/        # Evaluation History Listing & Deletion API
+│   │   ├── gemini/             # Generic AI Completion Helper API
+│   │   ├── grade/              # Raw AI Grading API (No History Saving)
+│   │   ├── ocr/                # Text/OMR Transcription Service API
+│   │   └── omr/                # OMR Verification API
+│   ├── components/             # Reusable React UI Elements
+│   │   └── ui/                 # Primitive components (shadcn Button)
+│   ├── evaluate/               # Main Faculty Console Interface
+│   ├── lib/                    # Domain Layer & Backend Utilities
+│   │   ├── ai-grading.ts       # Gemini prompt engineering and RAG
+│   │   ├── evaluation-store.ts # Data Access Layer (Postgres Prisma + Local JSON)
+│   │   ├── evaluation.ts       # Mathematical grading rules and fallback datasets
+│   │   ├── gemini.ts           # Google Generative AI SDK client wrapper
+│   │   ├── prisma.ts           # Database client singleton
+│   │   ├── supabase.ts         # Cloudinary replacement for Scanned files
+│   │   └── utils.ts            # Dynamic CSS Tailwind class merge helper
+│   ├── layout.tsx              # Root HTML wrapper and metadata
+│   └── page.tsx                # Marketing Landing Page
+├── prisma/                     # Database Configuration
+│   ├── schema.prisma           # Prisma PostgreSQL Database Schema
+│   └── local_history.json      # Local JSON store (Fallback database)
+├── public/                     # Static Client Assets
+├── next.config.ts              # Next.js server configuration
+├── components.json             # Shadcn configuration
+├── setup.bat                   # Machine setup script
+├── dev.bat                     # Developer server starter script
+└── package.json                # Project dependencies and scripts
 ```
 
 ---
 
-## Complete File-by-File Reference
-
-Here is the exhaustive directory analysis of PrepForge. Every active file is mapped, explained, and detailed.
-
-### 1. Database & Configuration Layer (Root & Prisma)
-
-#### 📂 `prisma/schema.prisma`
-- **Purpose:** Declares the database structure and sets up the Prisma ORM client generator.
-- **Detailed Mechanics:**
-  - Configures the client generator to use `prisma-client-js`.
-  - Sets the datasource provider to `"postgresql"`, linking to external databases via standard Supabase connection pooling parameters: `DATABASE_URL` (pooled port 6543) and `DIRECT_URL` (direct port 5432).
-  - **Models Configured:**
-    - **`EvaluationRecord`:** Holds historical logs for descriptive answer grading. Stores `studentName`, `studentRoll`, `stream` (JEE/NEET), `subject`, `score`, `total`, `confidence`, and full response data inside `resultJson` (a JSON column), along with uploaded attachment arrays (`fileUrls`).
-    - **`OmrRecord`:** Holds historical logs for OMR sheet grading. Stores the input `answerKey`, student `responses`, computed `score`, `total`, `accuracy`, and full breakdown metrics inside `resultJson`.
-
-#### 📂 `next.config.ts`
-- **Purpose:** Configures Next.js compilation options.
-- **Detailed Mechanics:**
-  - Declares `@prisma/client` as a `serverExternalPackages` target to prevent Next.js from attempting to bundle query engine binaries on compile, which would cause runtime EPERM issues.
-  - Sets `outputFileTracingRoot` to resolve file-path mapping warnings during deployment on virtual roots.
-
-#### 📂 `package.json`
-- **Purpose:** Configures scripts, production dependencies, and devDependencies.
-- **Key Scripts:**
-  - `npm run dev`: Boots Next.js development server using Webpack/Turbopack.
-  - `npm run build`: Triggers static page compilation, TypeScript checks, and CSS minification.
-  - `npm run lint`: Analyzes code flags with ESLint.
-- **Production Dependencies:**
-  - `@google/generative-ai`: Client SDK to speak with Google Gemini.
-  - `@prisma/client`: Auto-generated database client query builder.
-  - `@supabase/supabase-js`: Supabase API client for uploading and serving images.
-  - `lucide-react`: Curated library containing clean visual vector icons.
-  - `tailwind-merge` & `clsx`: Merges class lists dynamically without duplication.
-
-#### 📂 `.env.example` & `.env`
-- **Purpose:** Declares required credentials and environment variables.
-- **Variables Defined:**
-  - `GEMINI_API_KEY`: API key for Gemini Flash text & vision endpoints.
-  - `DATABASE_URL` / `DIRECT_URL`: Database connection strings.
-  - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: Direct Supabase keys to configure image buckets.
-
-#### 📂 `setup.bat` (Windows)
-- **Purpose:** Automates setting up a new machine. It installs standard dependencies via `npm install`, triggers `npx prisma generate` to build TypeScript types for the database schema, and pushes changes using `npx prisma db push`.
-
-#### 📂 `dev.bat` (Windows)
-- **Purpose:** Launches the local workspace dev server on `http://localhost:3000` after verifying `node_modules` exists.
+## 2. Exhaustive File-by-File Code Manual
 
 ---
 
-### 2. Core Domain Logic & Store (app/lib)
+### A. Root & Configuration Layer
 
-#### 📂 [app/lib/evaluation.ts](file:///C:/Users/DELL/PrepForge/app/lib/evaluation.ts)
-- **Purpose:** Serves as the primary local mathematical evaluation engine, defining structures and fallback grading calculations.
-- **Key Types Exported:**
-  - `Student`: Holds candidate details (`name`, `roll`, `stream`, `subject`, `answerText`, `omr`).
-  - `RubricPoint`: Declares grading rules (`id`, `source`, `topic`, `expected`, `keywords`, `marks`).
-  - `EvaluationResult`: Holds the structured payload of descriptive marks, citations, OMR scores, strengths, weaknesses, and improvement lists.
-  - `CustomOmrResult`: Details accuracy, correct/wrong/blank metrics, and subject-wise lists.
-- **Active Data Arrays:**
-  - `rubricBank`: Rubrics for physics, maths, chemistry, and biology based on NCERT guidelines.
-  - `students`: Seed data array for local demo candidates (e.g. Aarav Sharma, Meera Iyer, Kabir Khan).
-- **Core Functions:**
-  - **`evaluateLocally(student, answerText)`:** Runs if no Gemini Key is set. Split student answer text by line. For each rubric criteria, calculates keyword overlap scores (`lexicalScore`) and syllabus topic presence (`semanticTopicScore`), awarding marks step-by-step.
-  - **`evaluateCustomOmr(answerKeyText, responseText)`:** Runs OMR checks manually. Matches keys (e.g. A, B, C, D) against response strings. Computes scores (+4 for matching options, -1 for wrong responses, 0 for blanks), detects double-bubbles (e.g. "A/B") as anomalies, and returns subject-wise breakdowns.
-  - **`rankStudents(results)`:** Sorts students by total marks descending and appends positional ranks (e.g. `#1`, `#2`).
+#### 📄 `package.json`
+* **Role in Project:** Declares package dependencies, dev dependencies, build configurations, and npm run scripts.
+* **Core Packages Explained:**
+  * `@google/generative-ai`: Interacts with Gemini 1.5 Flash models to perform image OCR text conversion, visual OMR readings, and descriptive grading audits.
+  * `@prisma/client` & `prisma`: Standard database object-relational mapping tool to interface with Supabase PostgreSQL.
+  * `@supabase/supabase-js`: Standard library used to stream scanned student papers or OMR sheets directly into Supabase Storage Buckets.
+  * `lucide-react`: Supplies standard scalable vector icons for the user workspace tabs (e.g. Brain, History, ScanLine).
+  * `tailwind-merge` & `clsx`: Merges class lists dynamically, sorting CSS overrides.
+  * `next` & `react` / `react-dom`: Sets up the framework runtimes.
 
-#### 📂 [app/lib/evaluation-store.ts](file:///C:/Users/DELL/PrepForge/app/lib/evaluation-store.ts)
-- **Purpose:** Acts as the data access layer, abstracting database operations and managing the local filesystem fallback storage.
-- **Detailed Mechanics:**
-  - Checks if `process.env.DATABASE_URL` is set.
-  - **Local Fallback Mode:** If no DB URL exists, writes and reads from `prisma/local_history.json` using Node.js `fs/promises`.
-- **Functions Implemented:**
-  - **`saveEvaluationRecord(params)`:** Creates and appends a descriptive report to the database or `local_history.json` with a generated UUID.
-  - **`saveOmrRecord(params)`:** Appends OMR results to the database or `local_history.json`.
-  - **`listRecentEvaluations(limit)`:** Queries descriptive and OMR tables. Mappings align the different data shapes into a unified feed of type `HistoryItem`, sorted by creation date descending.
-  - **`deleteHistoryItem(id, type)`:** Filters out the record from the database or the local JSON file by ID.
-  - **`clearAllHistory()`:** Deletes all items, resetting `local_history.json` to empty arrays or clearing tables.
+#### 📄 `next.config.ts`
+* **Role in Project:** Modifies the default Next.js build compilation configurations.
+* **Key Implementation Details:**
+  * **`serverExternalPackages: ['@prisma/client']`:** Configures Prisma Client as an external package. This tells Next.js not to bundle Prisma query engines (e.g. `.dll`, `.so`, or `.node` binary files) into the production output bundle, avoiding locked-file permissions errors (`EPERM`) on Windows machines.
+  * **`outputFileTracingRoot`:** Corrects workspace relative paths for monorepos or nested directories, ensuring compilation outputs link correctly.
 
-#### 📂 [app/lib/gemini.ts](file:///C:/Users/DELL/PrepForge/app/lib/gemini.ts)
-- **Purpose:** Connects to the Google Generative AI REST endpoint, managing API models, client settings, and base64 conversions.
-- **Configuration:**
-  - Model configurations target `gemini-1.5-flash` for JSON/text and `text-embedding-004` for embedding vectors.
-- **Functions:**
-  - `geminiGenerateJson(prompt, parts)`: Queries Gemini and enforces JSON schema outputs. It wraps requests in a `Promise.race` with a 45-second timeout.
-  - `geminiGenerateText(prompt, parts)`: Returns plain text responses.
-  - `geminiEmbed(text)`: Generates 768-dimension semantic embeddings from input strings.
-  - `fileToBase64(file)`: Converts scanned attachments to base64 formats.
+#### 📄 `prisma/schema.prisma`
+* **Role in Project:** Serves as the source of truth for the database schema.
+* **Active Models and Attributes:**
+  * `EvaluationRecord`: Tracks descriptive grading.
+    * `id`: Standard UUID primary key.
+    * `studentName` / `studentRoll` / `stream` / `subject`: Standard string metadata fields.
+    * `mode`: Always default-valued to `"descriptive"`.
+    * `answerText` & `rubricText`: Large database strings (`@db.Text`) containing student papers and reference rubrics.
+    * `score` (Int) / `total` (Int) / `confidence` (Float): Marks awarded and Gemini confidence logs.
+    * `resultJson` (Json): Standard PostgreSQL JSON database column containing the complete, nested `EvaluationResult` payload.
+    * `fileUrls` (String[]): Array containing Supabase cloud paths to student attachments.
+  * `OmrRecord`: Tracks OMR bubble evaluations.
+    * `id`: Standard UUID primary key.
+    * `answerKey` & `responses`: Large string blobs.
+    * `score` (Int) / `total` (Int) / `accuracy` (Float): Verification statistics.
+    * `resultJson` (Json): Detailed question-by-question metrics.
 
-#### 📂 [app/lib/ai-grading.ts](file:///C:/Users/DELL/PrepForge/app/lib/ai-grading.ts)
-- **Purpose:** Formulates the prompt engineering logic and manages RAG context retrieval for Gemini.
-- **Main Prompts & Core Logic:**
-  - **RAG Rubric Retrieval:** If a grading rubric is extremely long (over 6000 characters), `retrieveRubricContext` splits the text into chunks, generates vector embeddings for the student's answer and the chunks, calculates cosine similarity, and selects the top 6 most relevant rubric sections to feed to Gemini.
-  - **`ocrAnswerSheets(images)`:** Prompts Gemini Vision to transcribe handwritten student answer sheets line-by-line while preserving formulas and step indicators.
-  - **`ocrOmrSheet(images)`:** Prompts Gemini Vision to read filled bubble fields, identify blank rows (`-`), double-mark errors (`?`), and return structured JSON.
-  - **`gradeWithGemini(...)`:** Primary grading prompt. Directs Gemini to act as an objective examiner, evaluating student answers using only the provided rubric context. It mandates evidence quotes for every point awarded.
-  - **`mapAiGradingToResult(grading, student, meta)`:** Normalizes the JSON output from Gemini, clamps marks between 0 and maximum point values, builds citation tags, and wraps the payload inside the `EvaluationResult` model.
-
-#### 📂 [app/lib/supabase.ts](file:///C:/Users/DELL/PrepForge/app/lib/supabase.ts)
-- **Purpose:** Manages scanned document uploads to Supabase Storage.
-- **Detailed Mechanics:**
-  - Instantiated client maps URL and service keys.
-  - Uploads images to the bucket `prepforge-uploads` under `answer-sheets/` or `omr-sheets/` subfolders, generating public URLs.
-
-#### 📂 [app/lib/prisma.ts](file:///C:/Users/DELL/PrepForge/app/lib/prisma.ts)
-- **Purpose:** Configures a PrismaClient singleton.
-- **Detailed Mechanics:**
-  - Instantiates client and assigns it to a global variable `globalThis.prismaGlobal` in non-production runs. This avoids throwing "too many connections" warnings during Next.js Hot Module Reloads.
-
-#### 📂 [app/lib/utils.ts](file:///C:/Users/DELL/PrepForge/app/lib/utils.ts)
-- **Purpose:** Small utility file hosting the `cn` class merger function which executes `clsx(inputs)` inside `tailwind-merge` to resolve overlapping styling rules.
+#### 📄 `setup.bat` & `dev.bat`
+* **Role in Project:** Windows batch scripts to automate environment configuration and execution.
+* **Inner Workings:**
+  * `setup.bat`: Verifies Node.js is on the environment path, triggers `npm install`, runs `npx prisma generate` to construct TS types, and attempts to run `npx prisma db push` against the PostgreSQL database.
+  * `dev.bat`: Starts the Next.js Turbopack compiler (`next dev --webpack`) on port 3000.
 
 ---
 
-### 3. API Route Layer (app/api)
+### B. App Router Pages (app/)
 
-#### 📂 [app/api/evaluate/route.ts](file:///C:/Users/DELL/PrepForge/app/api/evaluate/route.ts)
-- **Purpose:** API endpoint for descriptive answer grading.
-- **Execution Flow:**
-  1. Parses multipart form data to extract candidate metadata, typed answers, rubrics, and scanned files.
-  2. If no `GEMINI_API_KEY` is present, executes `evaluateLocally()` and returns early.
-  3. If images are uploaded, calls Gemini Vision (`ocrAnswerSheets`) to transcribe the text.
-  4. Calls `gradeWithGemini` with the transcribed text and the rubric.
+#### 📄 [app/layout.tsx](file:///C:/Users/DELL/PrepForge/app/layout.tsx)
+* **Role in Project:** Root layout wrapper rendering the global HTML envelope, body tag, and font imports.
+* **Inner Workings:**
+  * Defines site metadata (Title: `PrepForge - Faculty AI Evaluation Suite`, descriptions, and keywords) for SEO purposes.
+  * Links the global stylesheet (`globals.css`) and enables the `.dark` class by default on the `<html>` root for UI color consistency.
+
+#### 📄 [app/page.tsx](file:///C:/Users/DELL/PrepForge/app/page.tsx)
+* **Role in Project:** Renders the landing marketing website.
+* **Key Visual Elements:**
+  * Integrates the global `Navbar` component.
+  * Employs structured metric data lists (`workflow`, `evaluationCards`, `reportStats`) to create interactive preview widgets.
+  * Focuses calls-to-action directly on the Faculty Console `/evaluate` page.
+
+#### 📄 [app/evaluate/page.tsx](file:///C:/Users/DELL/PrepForge/app/evaluate/page.tsx)
+* **Role in Project:** The central Faculty Console dashboard, managing view workspace states, form uploads, and reports.
+* **State Management Breakdown:**
+  * `workspace`: String state (`"descriptive" | "omr" | "insights" | "report" | "history"`) controlling which panel is currently rendered.
+  * `selectedRoll`: Roll number of the currently selected student.
+  * `answerText` / `markingCriteria`: Textareas for descriptive text.
+  * `historyItems`: Array holding past evaluations fetched from the backend history API.
+* **Core API Integrations:**
+  * **`runDescriptive()`**: Sends student details, typed answer transcripts, rubrics, and scanned files inside a `FormData` POST request to `/api/evaluate`. Updates the console metrics and refreshes the history log.
+  * **`runOmr()`**: Sends the answer key, manually entered response strings, or scanned OMR sheets to `/api/omr`. Displays OMR score results and bubble audits.
+  * **`loadHistoryItem(item)`**: Triggered from the History tab. Maps a saved evaluation back into client states (`setResult`, `setSelectedRoll`, `setAnswerText`, `setOmrKeyText`, etc.) and routes the user directly to the evaluation workspace.
+  * **`deleteItem(id, type)`**: Triggers a `DELETE` request to `/api/evaluations` with the ID and type, filtering out deleted items from the local list.
+* **UI Child Components:**
+  * `StepGrades`: Lists step-by-step descriptive marks, display notes, and citation badges.
+  * `OmrDashboard`: Renders correct, wrong, blank, and review statistics alongside bubble checklists.
+  * `GapDashboard`: Renders strengths, weaknesses, and improvement lists.
+  * `ReportPreview` & `buildReportHtml`: Compiles grades into styled, offline-ready HTML reports.
+
+#### 📄 Redirects (`app/about/page.tsx`, `app/home/page.tsx`, `app/tools/page.tsx`, `app/welcome/page.tsx`)
+* **Role in Project:** Catch-all redirection pages.
+* **Inner Workings:** Use Next.js `redirect()` to route users:
+  * `/about` → redirects to the marketing landing page `/`.
+  * `/home`, `/tools`, and `/welcome` → redirect directly to the Faculty Console `/evaluate`.
+
+---
+
+### C. Domain & Library Utilities (app/lib/)
+
+#### 📄 [app/lib/evaluation.ts](file:///C:/Users/DELL/PrepForge/app/app/lib/evaluation.ts)
+* **Role in Project:** Core data definitions and local mathematical grading fallback routines.
+* **Key Algorithmic Logic:**
+  * **`evaluateLocally(student, answerText)` (No-DB Fallback Descriptive Grader):**
+    1. Splits answer sheets into individual lines.
+    2. Filters the `rubricBank` based on the student's stream (NEET gets Biology/Chemistry, JEE gets Physics/Maths).
+    3. Runs lexical and semantic similarity matches for each rubric criterion against the student's answer lines:
+       - `lexicalScore`: Computes how many keywords match (case-insensitive).
+       - `semanticTopicScore`: Assigns a score based on a local synonym dictionary mapping key topics (e.g. "Ray optics" maps to "lens", "mirror", "focal").
+    4. Computes step scores: `bestMatch >= 4` awards full marks, `>= 2` awards partial marks, and anything less requires faculty review.
+    5. Returns evaluation objects complete with citation records.
+  * **`evaluateCustomOmr(answerKeyText, responseText)` (OMR Grading Math):**
+    1. Compares option keys against student response strings.
+    2. **Score Logic:** Awards `+4` for matching keys, `-1` for incorrect options (negative marking), and `0` for blank responses.
+    3. **Anomaly Flags:** Flags invalid characters, double-bubbles, or unclear markings (e.g., "A/B") as anomalies that require manual review.
+    4. Computes subject-wise accuracies and rank standings.
+
+#### 📄 [app/lib/evaluation-store.ts](file:///C:/Users/DELL/PrepForge/app/app/lib/evaluation-store.ts)
+* **Role in Project:** Handles data persistence, querying history logs, and managing local file-based storage.
+* **Implementation Details & Fallbacks:**
+  * Checks if `process.env.DATABASE_URL` is configured.
+  * **File Fallback Mode:** Reads and writes to `prisma/local_history.json` using Node's `fs/promises`. It ensures that if the file does not exist, it defaults to empty lists without crashing.
+  * **`listRecentEvaluations(limit)`**: Merges descriptive evaluations and OMR records:
+    - Normalizes different table schemas into a unified client schema (`HistoryItem`).
+    - Sorts the combined feed by `createdAt` descending.
+  * **`deleteHistoryItem(id, type)`**: Deletes the matching record by ID from the database or filters it out of `local_history.json`.
+
+#### 📄 [app/lib/gemini.ts](file:///C:/Users/DELL/PrepForge/app/app/lib/gemini.ts)
+* **Role in Project:** Client SDK wrapper for Google Gemini REST APIs.
+* **Key Features:**
+  * Initialises the `GoogleGenerativeAI` client using `GEMINI_API_KEY`.
+  * **`geminiGenerateJson<T>(prompt, parts)`**: Sends prompts and image parts (transcripts or base64 scans) to `gemini-1.5-flash`. Uses a `generationConfig` with `responseMimeType: "application/json"` to enforce structured JSON outputs matching our types.
+  * **`geminiEmbed(text)`**: Queries the `text-embedding-004` model to convert string logs into 768-dimension vector arrays, which are used to search long rubrics.
+
+#### 📄 [app/lib/ai-grading.ts](file:///C:/Users/DELL/PrepForge/app/app/lib/ai-grading.ts)
+* **Role in Project:** Handles Gemini prompt engineering and RAG semantic searches.
+* **Key Implementation Details:**
+  * **`retrieveRubricContext(answerText, rubricText)` (Semantic RAG):**
+    If a marking rubric is extremely long, it splits the rubric into smaller chunks. It generates a semantic vector embedding for the student's answer and for each chunk using `geminiEmbed`. It then calculates **cosine similarity**:
+    $$\text{similarity} = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$$
+    It sorts the chunks and selects the top 6 most relevant rubric sections to send to Gemini, reducing prompt token usage and improving grading accuracy.
+  * **Grading System Prompt:** Directs the model to act as a strict exam auditor. Instructs the model to award marks based only on matching rubric evidence and return structured evaluations with exact citation quotes.
+
+#### 📄 [app/lib/supabase.ts](file:///C:/Users/DELL/PrepForge/app/app/lib/supabase.ts)
+* **Role in Project:** Handles cloud storage uploads for scanned papers.
+* **Key Features:**
+  * Initializes the Supabase client using environment variables.
+  * Converts file buffers and uploads them to the storage bucket `prepforge-uploads`.
+  * Retrieves and returns the public asset URL.
+
+#### 📄 [app/lib/prisma.ts` & `app/lib/utils.ts`
+* **Prisma Singleton (`prisma.ts`):** Prevents Next.js from creating new database connection pools during hot reloads by attaching the client to `globalThis`.
+* **Utils (`utils.ts`):** Combines `clsx` and `tailwind-merge` class overrides into a single `cn` helper.
+
+---
+
+### D. Server API Endpoints (app/api/)
+
+#### 📄 [app/api/evaluate/route.ts](file:///C:/Users/DELL/PrepForge/app/app/api/evaluate/route.ts)
+* **Role in Project:** API endpoint for descriptive grading.
+* **Request Pipeline:**
+  1. Parses multipart form-data to extract student metadata, typed answers, rubrics, and scanned files.
+  2. If `GEMINI_API_KEY` is not set, calls `evaluateLocally` and returns the local grading fallback.
+  3. If scanned files are provided, runs them through Gemini Vision OCR (`ocrAnswerSheets`) to transcribe the text.
+  4. Triggers `gradeWithGemini` using the transcribed answer sheet and the rubric.
   5. Uploads raw images to Supabase storage.
-  6. Saves the evaluation report to the database (or JSON history) via `saveEvaluationRecord`.
+  6. Saves the evaluation record to the history log using `saveEvaluationRecord`.
   7. Returns the final evaluation JSON.
 
-#### 📂 [app/api/omr/route.ts](file:///C:/Users/DELL/PrepForge/app/api/omr/route.ts)
-- **Purpose:** API endpoint for OMR sheet grading.
-- **Execution Flow:**
-  1. Parses form data containing the answer key, manually entered response strings, or uploaded OMR scans.
-  2. If scans are provided, prompts Gemini Vision (`ocrOmrSheet`) to identify bubbles.
-  3. Runs mathematical checks against the correct keys.
-  4. Saves OMR logs via `saveOmrRecord`.
-  5. Returns scores, accuracy percentage, and parsed option listings.
+#### 📄 [app/api/omr/route.ts](file:///C:/Users/DELL/PrepForge/app/app/api/omr/route.ts)
+* **Role in Project:** API endpoint for OMR verification.
+* **Request Pipeline:**
+  1. Processes answer keys and responses.
+  2. If OMR scans are uploaded, calls Gemini Vision (`ocrOmrSheet`) to identify the bubbles.
+  3. Evaluates answers against the key using `evaluateCustomOmr`.
+  4. Saves OMR details to the history log via `saveOmrRecord`.
+  5. Returns scores, item statistics, and accuracy percentages.
 
-#### 📂 [app/api/evaluations/route.ts](file:///C:/Users/DELL/PrepForge/app/api/evaluations/route.ts)
-- **Purpose:** Endpoint managing history logs.
-- **Request Handlers:**
-  - `GET`: Returns the merged history log sorted by date.
+#### 📄 [app/api/evaluations/route.ts](file:///C:/Users/DELL/PrepForge/app/app/api/evaluations/route.ts)
+* **Role in Project:** Handles requests to query, delete, or clear evaluation history.
+* **Handlers:**
+  * `GET`: Fetches and returns the unified history log.
   - `DELETE`: Receives `{ id, type }` in JSON body to delete a specific history item, or `{ clearAll: true }` to wipe all history logs.
 
-#### 📂 [app/api/gemini/route.ts](file:///C:/Users/DELL/PrepForge/app/api/gemini/route.ts)
-- **Purpose:** Helper endpoint to query Gemini directly. It receives user prompts and returns raw AI text completions.
-
-#### 📂 [app/api/grade/route.ts](file:///C:/Users/DELL/PrepForge/app/api/grade/route.ts)
-- **Purpose:** Endpoint executing standalone descriptive grading requests. It acts as a lightweight wrapper around `gradeWithGemini` without saving records to history.
-
-#### 📂 [app/api/ocr/route.ts](file:///C:/Users/DELL/PrepForge/app/api/ocr/route.ts)
-- **Purpose:** Endpoint executing standalone transcription tasks. It reads scanned files (answers or OMRs) and returns transcribed text.
+#### 📄 [app/api/gemini/route.ts`, `app/api/grade/route.ts`, and `app/api/ocr/route.ts`
+* **`gemini/route.ts`:** Returns raw text completions from Gemini for custom faculty prompts.
+* **`grade/route.ts`:** Executes one-off grading requests without saving them to history.
+* **`ocr/route.ts`:** Transcribes handwritten student paper scans or OMR bubble sheets.
 
 ---
 
-### 4. Page & UI Components Layer (app/components, app/evaluate, app/)
+## 3. Core Algorithm & Mathematical Breakdown
 
-#### 📂 [app/evaluate/page.tsx](file:///C:/Users/DELL/PrepForge/app/evaluate/page.tsx)
-- **Purpose:** The Faculty Console dashboard UI, serving as the central workspace of the application.
-- **Tabs/Workspaces Handled:**
-  1. **Descriptive Answers:** Faculty can select a student, upload scanned answers, view/modify the marking criteria, and click **Evaluate Descriptive Answers** to trigger grading.
-  2. **OMR Evaluation:** Displays the answer key and responses. Faculty can upload OMR sheets and run analysis, showing correct, wrong, blank, and anomalous answers (e.g. double bubbles).
-  3. **Gaps & Patterns:** Renders visual report dashboards displaying candidate strengths, topic-wise gaps, and NCERT-based recommendations. It also includes class rankings.
-  4. **Reports:** Renders a printable performance preview and exposes a download button to export the report as an HTML document.
-  5. **Evaluation History:** Fetches saved records from `/api/evaluations`. Lists descriptive and OMR sessions. Faculty can load a saved evaluation back into the console or delete it.
-- **Inner Helper UI Functions:**
-  - `Metrics`: Displays score cards for descriptive answers, OMR scores, and accuracy percentages.
-  - `Panel` & `FeatureCard`: Box layout containers.
-  - `StudentPicker`: Selection buttons to load candidate mock data.
-  - `UploadDrop` & `FileList`: Drag-and-drop file upload container.
-  - `Editor`: Input areas for answers, keys, or rubrics.
-  - `StepGrades`: Lists step-by-step descriptive marks with citation badges.
-  - `ReportPreview`: Renders the printable card preview.
-  - `buildReportHtml`: Combines student data, evaluation metrics, and styled CSS into a standalone print-ready HTML page.
+### Cosine Similarity Math
+Used during semantic RAG search to filter long rubrics:
 
-#### 📂 [app/components/Navbar.tsx](file:///C:/Users/DELL/PrepForge/app/components/Navbar.tsx)
-- **Purpose:** Global page navigation header.
-- **Detailed Mechanics:**
-  - Detects window scroll state to trigger a backdrop-blur floating effect.
-  - Hosts links to descriptive section anchors (`#workflow`, `#evaluation`, `#reports`) on the landing page, and provides a direct link button to the `/evaluate` Faculty Console.
+$$\text{Similarity}(A, B) = \frac{\sum_{i=1}^{n} A_i B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \sqrt{\sum_{i=1}^{n} B_i^2}}$$
 
-#### 📂 [app/components/ui/button.tsx](file:///C:/Users/DELL/PrepForge/app/components/ui/button.tsx)
-- **Purpose:** Primitive UI button wrapper configured using Shadcn tokens and `class-variance-authority` variables (e.g. primary, secondary, destructive, outline modes).
+- $A$: 768-dimensional vector embedding of the student's answer sheet.
+- $B$: 768-dimensional vector embedding of a rubric chunk.
+- Chunks with the highest similarity scores are selected and sent in the Gemini prompt.
 
-#### 📂 [app/page.tsx](file:///C:/Users/DELL/PrepForge/app/page.tsx)
-- **Purpose:** Marketing landing page.
-- **Detailed Mechanics:**
-  - Displays high-fidelity visual cards and step-by-step progress bars explaining the OCR transcription, RAG rubric evaluation, and report export features.
+### Offline Grading Math
+Used when running locally without a Gemini API key:
 
-#### 📂 [app/layout.tsx](file:///C:/Users/DELL/PrepForge/app/layout.tsx)
-- **Purpose:** Global HTML envelope.
-- **Detailed Mechanics:**
-  - Configures global metadata (page headers, description keywords, viewport scales), sets `"dark"` mode parameters, and links `app/globals.css`.
+$$\text{Best Match Score} = \text{lexicalScore}(\text{keywords}) + \text{semanticTopicScore}(\text{topic})$$
 
-#### 📂 [app/globals.css](file:///C:/Users/DELL/PrepForge/app/globals.css)
-- **Purpose:** Central styling sheet.
-- **Detailed Mechanics:**
-  - Sets up the design tokens (Tailwind CSS 4 setup). Declares standard typography fonts and HSL variables for dark mode colors (e.g., slate backgrounds, teal details).
+- $\text{lexicalScore}$: Case-insensitive keyword matching count.
+- $\text{semanticTopicScore}$: Presence of synonym words matching the criteria.
+- **Grades Awarded:**
+  - $\text{Best Match Score} \ge 4$: Full marks (e.g. 4/4).
+  - $\text{Best Match Score} \ge 2$: Partial marks (e.g. 2/4).
+  - Else: Requires review (e.g. 0/4).
 
-#### 📂 [app/about/page.tsx](file:///C:/Users/DELL/PrepForge/app/about/page.tsx)
-- **Purpose:** Simple catch-all redirect. Automatically redirects traffic from `/about` back to the home page `/`.
+### OMR Score Calculations
+Standard JEE and NEET scoring math:
 
-#### 📂 [app/home/page.tsx](file:///C:/Users/DELL/PrepForge/app/home/page.tsx), `app/tools/page.tsx`, `app/welcome/page.tsx`
-- **Purpose:** Simple catch-all redirects. Automatically redirect traffic from `/home`, `/tools`, and `/welcome` directly to the Faculty Console `/evaluate`.
+$$\text{Score} = (\text{Correct} \times 4) - (\text{Wrong} \times 1)$$
+
+- Correct responses award $+4$ marks.
+- Incorrect responses deduct $-1$ mark.
+- Blank responses or anomaly flags award $0$ marks.
