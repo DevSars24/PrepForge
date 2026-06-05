@@ -208,8 +208,8 @@ export default function LandingPage() {
               <ShieldCheck className="mb-6 text-[#9D8DFF]" size={34} />
               <h2 className="text-3xl font-black tracking-tight text-white">College-ready demo, no database needed.</h2>
               <p className="mt-4 text-base font-medium leading-8 text-[#9DA1B6]">
-                Static data keeps the demo fast for investors and colleges. Clerk handles login,
-                Gemini handles grounded marks and feedback when env keys are present.
+                Static data keeps the demo fast for investors and colleges. An automatic local filesystem
+                fallback saves evaluation history directly in the workspace, while Gemini handles grounded marks and feedback when env keys are present.
               </p>
               <Link
                 href="/evaluate"

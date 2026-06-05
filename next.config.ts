@@ -5,12 +5,6 @@ const nextConfig = {
 
   // Fix workspace root warning (multiple lockfiles detected)
   outputFileTracingRoot: require('path').join(__dirname, '../'),
-
-  images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: 'res.cloudinary.com' },
-    ],
-  },
 };
 
 export default nextConfig;
