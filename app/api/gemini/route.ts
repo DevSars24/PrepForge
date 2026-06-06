@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { FLASH_MODEL } from "@/lib/gemini";
 
 type GeminiRequest = {
   prompt?: string;
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: FLASH_MODEL,
       generationConfig: {
         temperature: 0.1,
       },

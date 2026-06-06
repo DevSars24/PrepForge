@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, type Part, type Schema } from "@google/generative-ai";
 
-const FLASH = "gemini-1.5-flash";
+export const FLASH_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const EMBED = "text-embedding-004";
 
 async function retryWithExponentialBackoff<T>(
@@ -44,7 +44,7 @@ export async function geminiGenerateJson<T>(
   if (!client) throw new Error("GEMINI_API_KEY is not configured");
 
   const model = client.getGenerativeModel({
-    model: FLASH,
+    model: FLASH_MODEL,
     generationConfig: {
       temperature: 0,
       responseMimeType: "application/json",
@@ -71,7 +71,7 @@ export async function geminiGenerateText(prompt: string, parts: Part[] = []): Pr
   if (!client) throw new Error("GEMINI_API_KEY is not configured");
 
   const model = client.getGenerativeModel({
-    model: FLASH,
+    model: FLASH_MODEL,
     generationConfig: { temperature: 0 },
   });
 
