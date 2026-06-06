@@ -96,11 +96,13 @@ export default function EvaluatePage() {
       });
       if (res.ok) {
         setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+        setStatusNote("History item deleted successfully.");
       } else {
-        alert("Failed to delete history item");
+        setStatusNote("Failed to delete history item.");
       }
     } catch (error) {
       console.error("Failed to delete:", error);
+      setStatusNote("An error occurred while deleting the history item.");
     }
   };
 
@@ -114,11 +116,13 @@ export default function EvaluatePage() {
       });
       if (res.ok) {
         setHistoryItems([]);
+        setStatusNote("All history logs cleared.");
       } else {
-        alert("Failed to clear history");
+        setStatusNote("Failed to clear history.");
       }
     } catch (error) {
       console.error("Failed to clear history:", error);
+      setStatusNote("An error occurred while clearing history.");
     }
   };
 
@@ -147,7 +151,10 @@ export default function EvaluatePage() {
     }
   };
 
-  const streamStudents = students.filter((student) => student.stream === stream);
+  const streamStudents = useMemo(
+    () => students.filter((student) => student.stream === stream),
+    [stream]
+  );
   const ranked = useMemo(
     () => rankStudents(streamStudents.map((student) => ({ student, result: evaluateLocally(student) }))),
     [streamStudents]
@@ -192,6 +199,9 @@ export default function EvaluatePage() {
       else setStatusNote("AI grading complete (Gemini).");
       fetchHistory();
       setWorkspace("insights");
+    } catch (err: any) {
+      console.error(err);
+      setStatusNote("Network request failed. Loaded local grading metrics instead.");
     } finally {
       setLoading(false);
     }
@@ -219,6 +229,10 @@ export default function EvaluatePage() {
       setStatusNote(data.visionUsed ? "OMR sheet read with Gemini Vision." : "OMR scored from text responses.");
       fetchHistory();
       setWorkspace("omr");
+    } catch (err: any) {
+      console.error(err);
+      setOmrResult(evaluateCustomOmr(omrKeyText, omrResponseText));
+      setStatusNote("Network request failed. Scored OMR locally using response text.");
     } finally {
       setLoading(false);
     }
@@ -231,8 +245,25 @@ export default function EvaluatePage() {
   ) => {
     if (!files) return;
     const list = Array.from(files);
-    setter((prev) => [...prev, ...list.map((file) => ({ name: file.name, size: file.size, type: file.type || "file" }))]);
-    refSetter?.((prev) => [...prev, ...list]);
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    
+    const validFiles = list.filter((file) => {
+      if (file.size > MAX_SIZE) {
+        setStatusNote(`File "${file.name}" is too large. Max size is 5MB.`);
+        return false;
+      }
+      if (file.type && !allowedTypes.includes(file.type)) {
+        setStatusNote(`File "${file.name}" is not supported. Please upload PNG, JPG, WEBP, or PDF.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    setter((prev) => [...prev, ...validFiles.map((file) => ({ name: file.name, size: file.size, type: file.type || "file" }))]);
+    refSetter?.((prev) => [...prev, ...validFiles]);
   };
 
   const downloadReport = () => {

@@ -1,5 +1,6 @@
 import { geminiEmbed, geminiGenerateJson, geminiGenerateText, imagePart } from "@/lib/gemini";
 import type { EvaluationResult, Student, Stream } from "@/lib/evaluation";
+import { SchemaType, type Schema } from "@google/generative-ai";
 
 export type ImageInput = { base64: string; mimeType: string; name?: string };
 
@@ -32,7 +33,109 @@ type OmrVisionPayload = {
   notes: string;
 };
 
-function chunkRubric(text: string, size = 500): string[] {
+const aiGradingSchema: Schema = {
+  type: SchemaType.OBJECT,
+  description: "Detailed evaluation of student performance based on JEE/NEET marking rubric.",
+  properties: {
+    stepGrades: {
+      type: SchemaType.ARRAY,
+      description: "Breakdown of scores for each rubric point.",
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          rubricId: { type: SchemaType.STRING, description: "The ID from the rubric." },
+          topic: { type: SchemaType.STRING, description: "Topic description." },
+          expected: { type: SchemaType.STRING, description: "Expected content description." },
+          awarded: { type: SchemaType.NUMBER, description: "Marks awarded for this step." },
+          max: { type: SchemaType.NUMBER, description: "Maximum marks allowed for this step." },
+          confidence: { type: SchemaType.NUMBER, description: "AI confidence for this step (0.0 to 1.0)." },
+          status: {
+            type: SchemaType.STRING,
+            format: "enum",
+            enum: ["earned", "partial", "review"],
+            description: "earned (full marks), partial (partial credit), or review (requires faculty review)."
+          },
+          note: { type: SchemaType.STRING, description: "Justification for the awarded score." },
+          evidenceQuote: { type: SchemaType.STRING, description: "Exact quote/sentence from student's answer sheet that proves this step." },
+          citationSource: { type: SchemaType.STRING, description: "Source reference from the rubric." },
+        },
+        required: [
+          "rubricId",
+          "topic",
+          "expected",
+          "awarded",
+          "max",
+          "confidence",
+          "status",
+          "note",
+          "evidenceQuote",
+          "citationSource"
+        ],
+      },
+    },
+    strengths: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: "Key topics or concepts where the student scored full marks.",
+    },
+    weaknesses: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: "Topics or concepts where the student missed marks or was incomplete.",
+    },
+    topicGaps: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: "Syllabus topics flagged with gaps based on incorrect or missing answers.",
+    },
+    recommendations: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: "Actionable study steps targeting flagged topic gaps.",
+    },
+    summary: {
+      type: SchemaType.STRING,
+      description: "A 2-3 sentence overall summary of the student's attempt.",
+    },
+    overallConfidence: {
+      type: SchemaType.NUMBER,
+      description: "The overall confidence of the grading evaluation from 0.0 to 1.0.",
+    },
+  },
+  required: [
+    "stepGrades",
+    "strengths",
+    "weaknesses",
+    "topicGaps",
+    "recommendations",
+    "summary",
+    "overallConfidence"
+  ],
+};
+
+const omrVisionSchema: Schema = {
+  type: SchemaType.OBJECT,
+  description: "Structured extraction of marked options on an OMR bubble sheet.",
+  properties: {
+    answers: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: "Ordered options from Q1. Use 'A', 'B', 'C', 'D' for selected answers, '-' for blank, and '?' for double bubbles.",
+    },
+    anomalies: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: "Any double-filled options, faint marks, or unclear bubbles.",
+    },
+    notes: {
+      type: SchemaType.STRING,
+      description: "Readability and quality assessment notes.",
+    },
+  },
+  required: ["answers", "anomalies", "notes"],
+};
+
+function chunkRubric(text: string, size = 1200): string[] {
   return text
     .split(/\n{2,}/)
     .map((block) => block.trim())
@@ -65,18 +168,42 @@ async function retrieveRubricContext(answerText: string, rubricText: string): Pr
 
   try {
     const answerEmbed = await geminiEmbed(answerText.slice(0, 2000));
-    const scored = await Promise.all(
-      chunks.map(async (chunk) => {
-        const chunkEmbed = await geminiEmbed(chunk);
-        return { chunk, score: cosineSimilarity(answerEmbed, chunkEmbed) };
-      })
-    );
+    
+    // Batch embeddings in groups of 4 to prevent HTTP 429 rate limit exceptions
+    const scored: { chunk: string; score: number }[] = [];
+    const selectedChunks = chunks.slice(0, 12); // Max 12 chunks to keep API requests bounded
+    const batchSize = 4;
+    
+    for (let i = 0; i < selectedChunks.length; i += batchSize) {
+      const batch = selectedChunks.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (chunk) => {
+          try {
+            const chunkEmbed = await geminiEmbed(chunk);
+            return { chunk, score: cosineSimilarity(answerEmbed, chunkEmbed) };
+          } catch (err) {
+            console.error("RAG Chunk Embedding Error:", err);
+            return null;
+          }
+        })
+      );
+      
+      for (const res of results) {
+        if (res) scored.push(res);
+      }
+    }
+
+    if (!scored.length) {
+      return chunks.slice(0, 6).join("\n\n---\n\n");
+    }
+
     return scored
       .sort((a, b) => b.score - a.score)
       .slice(0, 6)
       .map((item) => item.chunk)
       .join("\n\n---\n\n");
-  } catch {
+  } catch (error) {
+    console.error("retrieveRubricContext general fallback:", error);
     return chunks.slice(0, 6).join("\n\n---\n\n");
   }
 }
@@ -123,7 +250,7 @@ Rules:
 - One entry per question, in order starting Q1
 `.trim();
 
-  return geminiGenerateJson<OmrVisionPayload>(prompt, parts);
+  return geminiGenerateJson<OmrVisionPayload>(prompt, parts, omrVisionSchema);
 }
 
 export async function gradeWithGemini(params: {
@@ -149,29 +276,14 @@ ${rubricContext}
 STUDENT ANSWER:
 ${params.answerText}
 
-Return JSON:
-{
-  "stepGrades": [
-    {
-      "rubricId": "string id",
-      "topic": "topic name",
-      "expected": "what rubric requires",
-      "awarded": number,
-      "max": number,
-      "confidence": 0.0-1.0,
-      "status": "earned" | "partial" | "review",
-      "note": "why marks were awarded or deducted",
-      "evidenceQuote": "exact quote from student answer",
-      "citationSource": "rubric reference"
-    }
-  ],
-  "strengths": ["string"],
-  "weaknesses": ["string"],
-  "topicGaps": ["string"],
-  "recommendations": ["NCERT-focused practice suggestions"],
-  "summary": "2-3 sentence faculty summary",
-  "overallConfidence": 0.0-1.0
-}
+Return JSON matching the schema parameters:
+- "stepGrades": Array of evaluations per rubric point
+- "strengths": Topics where student performed well
+- "weaknesses": Topics with missing/incorrect details
+- "topicGaps": syllabus subtopics with concept gaps
+- "recommendations": targeted study steps
+- "summary": brief faculty description
+- "overallConfidence": float confidence 0.0 to 1.0
 
 Rules:
 - Award partial credit for correct method even if final answer is wrong
@@ -180,7 +292,7 @@ Rules:
 - recommendations must target topicGaps
 `.trim();
 
-  const grading = await geminiGenerateJson<AiGradingPayload>(prompt);
+  const grading = await geminiGenerateJson<AiGradingPayload>(prompt, [], aiGradingSchema);
   return { grading, rubricContext, retrievalStage };
 }
 
