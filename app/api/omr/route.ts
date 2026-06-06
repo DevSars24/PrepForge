@@ -3,6 +3,7 @@ import { saveOmrRecord } from "@/lib/evaluation-store";
 import { fileToBase64, hasGeminiKey } from "@/lib/gemini";
 import { evaluateCustomOmr } from "@/lib/evaluation";
 import { uploadEvaluationFile } from "@/lib/supabase";
+import { errorResponse, normalizeError } from "@/lib/debug";
 
 export async function POST(req: Request) {
   try {
@@ -59,7 +60,6 @@ export async function POST(req: Request) {
       fileUrls,
     });
   } catch (error) {
-    console.error("OMR API error:", error);
-    return Response.json({ error: error instanceof Error ? error.message : "OMR evaluation failed" }, { status: 500 });
+    return errorResponse(normalizeError(error, { kind: "evaluation_error", component: "omr.POST" }));
   }
 }

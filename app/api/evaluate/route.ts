@@ -1,8 +1,9 @@
 import { gradeWithGemini, mapAiGradingToResult, ocrAnswerSheets } from "@/lib/ai-grading";
 import { saveEvaluationRecord } from "@/lib/evaluation-store";
-import { fileToBase64, hasGeminiKey } from "@/lib/gemini";
+import { fileToBase64, hasGeminiKey, isSupportedScanMimeType } from "@/lib/gemini";
 import { evaluateLocally, students, type Student } from "@/lib/evaluation";
 import { uploadEvaluationFile } from "@/lib/supabase";
+import { logDebugError, normalizeError } from "@/lib/debug";
 
 async function parseRequest(req: Request) {
   const contentType = req.headers.get("content-type") || "";
@@ -14,7 +15,8 @@ async function parseRequest(req: Request) {
     const answerText = String(form.get("answerText") || "");
     const rubricText = String(form.get("rubricText") || "");
     const files = form.getAll("answerFiles").filter((item): item is File => item instanceof File);
-    return { student, answerText, rubricText, files };
+    const criteriaFiles = form.getAll("criteriaFiles").filter((item): item is File => item instanceof File);
+    return { student, answerText, rubricText, files, criteriaFiles };
   }
 
   const body = (await req.json()) as {
@@ -28,6 +30,7 @@ async function parseRequest(req: Request) {
     answerText: body.answerText || "",
     rubricText: body.rubricText || "",
     files: [] as File[],
+    criteriaFiles: [] as File[],
   };
 }
 
@@ -36,7 +39,8 @@ export async function POST(req: Request) {
   try {
     const parsed = await parseRequest(req);
     student = parsed.student;
-    const { answerText: inputText, rubricText, files } = parsed;
+    const { answerText: inputText, files, criteriaFiles } = parsed;
+    let rubricText = parsed.rubricText;
 
     if (!student.name || !student.roll || !student.stream) {
       return Response.json(
@@ -49,10 +53,24 @@ export async function POST(req: Request) {
     let ocrUsed = false;
 
     // Filter out unsupported files in production
-    const validFiles = files.filter(
-      (file) =>
-        file.type.startsWith("image/") || file.type === "application/pdf"
-    );
+    const allScanFiles = [...files, ...criteriaFiles];
+    const invalidFiles = allScanFiles.filter((file) => !isSupportedScanMimeType(file.type || ""));
+    if (invalidFiles.length) {
+      return Response.json(
+        {
+          error: `Unsupported upload type: ${invalidFiles.map((file) => `${file.name} (${file.type || "unknown"})`).join(", ")}`,
+          debug: {
+            kind: "file_upload_error",
+            component: "evaluate.POST",
+            request: { files: invalidFiles.map((file) => ({ name: file.name, type: file.type, size: file.size })) },
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    const validFiles = files;
+    const validCriteriaFiles = criteriaFiles;
 
     if (!hasGeminiKey()) {
       const local = evaluateLocally(student, `${answerText}\n${rubricText}`);
@@ -63,10 +81,16 @@ export async function POST(req: Request) {
     }
 
     if (validFiles.length) {
-      const images = await Promise.all(validFiles.map((file) => fileToBase64(file)));
+      const images = await Promise.all(validFiles.map((file) => fileToBase64(file).then((data) => ({ ...data, name: file.name }))));
       const ocrText = await ocrAnswerSheets(images);
       answerText = [ocrText, answerText].filter(Boolean).join("\n\n");
       ocrUsed = true;
+    }
+
+    if (validCriteriaFiles.length) {
+      const criteriaImages = await Promise.all(validCriteriaFiles.map((file) => fileToBase64(file).then((data) => ({ ...data, name: file.name }))));
+      const criteriaText = await ocrAnswerSheets(criteriaImages);
+      rubricText = [rubricText, criteriaText].filter(Boolean).join("\n\n");
     }
 
     if (!answerText.trim()) {
@@ -89,7 +113,10 @@ export async function POST(req: Request) {
     });
 
     const fileUrls = (
-      await Promise.all(validFiles.map((file) => uploadEvaluationFile(file, "answer-sheets")))
+      await Promise.all([
+        ...validFiles.map((file) => uploadEvaluationFile(file, "answer-sheets")),
+        ...validCriteriaFiles.map((file) => uploadEvaluationFile(file, "rubrics")),
+      ])
     ).filter((url): url is string => Boolean(url));
 
     const saved = await saveEvaluationRecord({
@@ -106,11 +133,13 @@ export async function POST(req: Request) {
       fileUrls,
     });
   } catch (error) {
-    console.error("Evaluation API error:", error);
+    const debug = normalizeError(error, { kind: "evaluation_error", component: "evaluate.POST" });
+    logDebugError(debug);
     const local = evaluateLocally(student);
     return Response.json({
       ...local,
-      warning: error instanceof Error ? `Gemini evaluation failed: ${error.message}` : "Gemini evaluation failed. Returned local fallback.",
+      warning: `Evaluation failed: ${debug.message}. Returned local fallback.`,
+      debug,
     });
   }
 }

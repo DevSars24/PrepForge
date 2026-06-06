@@ -1,6 +1,7 @@
 import { gradeWithGemini, mapAiGradingToResult } from "@/lib/ai-grading";
 import { hasGeminiKey } from "@/lib/gemini";
 import { evaluateLocally, students, type Student } from "@/lib/evaluation";
+import { errorResponse, normalizeError } from "@/lib/debug";
 
 type Body = {
   student?: Student;
@@ -38,7 +39,6 @@ export async function POST(req: Request) {
       })
     );
   } catch (error) {
-    console.error("Grade API error:", error);
-    return Response.json({ error: error instanceof Error ? error.message : "Grading failed" }, { status: 500 });
+    return errorResponse(normalizeError(error, { kind: "evaluation_error", component: "grade.POST" }));
   }
 }

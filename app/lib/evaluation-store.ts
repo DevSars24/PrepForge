@@ -1,10 +1,14 @@
-import prisma from "@/lib/prisma";
 import type { CustomOmrResult, EvaluationResult, Student } from "@/lib/evaluation";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 
 const LOCAL_HISTORY_PATH = path.join(process.cwd(), "prisma", "local_history.json");
+
+async function getPrisma() {
+  const mod = await import("@/lib/prisma");
+  return mod.default;
+}
 
 export type HistoryItem = {
   id: string;
@@ -14,12 +18,53 @@ export type HistoryItem = {
   score: number;
   total: number;
   createdAt: string;
-  resultJson: any;
+  resultJson: Record<string, unknown> | EvaluationResult | CustomOmrResult;
 };
 
 type LocalHistorySchema = {
-  evaluations: any[];
-  omrRecords: any[];
+  evaluations: LocalEvaluationRecord[];
+  omrRecords: LocalOmrRecord[];
+};
+
+type LocalEvaluationRecord = {
+  id: string;
+  studentName: string;
+  studentRoll: string;
+  stream: Student["stream"];
+  subject: string;
+  mode: "descriptive";
+  answerText: string;
+  rubricText?: string;
+  score: number;
+  total: number;
+  confidence: number;
+  resultJson: EvaluationResult;
+  fileUrls: string[];
+  createdAt: string;
+};
+
+type LocalOmrRecord = {
+  id: string;
+  answerKey: string;
+  responses: string;
+  score: number;
+  total: number;
+  accuracy: number;
+  resultJson: CustomOmrResult;
+  fileUrls: string[];
+  createdAt: string;
+};
+
+type DbEvaluationRecord = Omit<LocalEvaluationRecord, "createdAt" | "mode" | "stream" | "resultJson"> & {
+  stream: string;
+  mode: string;
+  resultJson: Record<string, unknown>;
+  createdAt: Date;
+};
+
+type DbOmrRecord = Omit<LocalOmrRecord, "createdAt" | "resultJson"> & {
+  resultJson: Record<string, unknown>;
+  createdAt: Date;
 };
 
 async function getLocalHistory(): Promise<LocalHistorySchema> {
@@ -49,6 +94,7 @@ export async function saveEvaluationRecord(params: {
 }) {
   try {
     if (process.env.DATABASE_URL) {
+      const prisma = await getPrisma();
       return await prisma.evaluationRecord.create({
         data: {
           studentName: params.student.name,
@@ -66,7 +112,7 @@ export async function saveEvaluationRecord(params: {
         },
       });
     } else {
-      const localRec = {
+      const localRec: LocalEvaluationRecord = {
         id: crypto.randomUUID(),
         studentName: params.student.name,
         studentRoll: params.student.roll,
@@ -101,6 +147,7 @@ export async function saveOmrRecord(params: {
 }) {
   try {
     if (process.env.DATABASE_URL) {
+      const prisma = await getPrisma();
       return await prisma.omrRecord.create({
         data: {
           answerKey: params.answerKey,
@@ -113,7 +160,7 @@ export async function saveOmrRecord(params: {
         },
       });
     } else {
-      const localRec = {
+      const localRec: LocalOmrRecord = {
         id: crypto.randomUUID(),
         answerKey: params.answerKey,
         responses: params.responses,
@@ -138,14 +185,15 @@ export async function saveOmrRecord(params: {
 export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> {
   try {
     if (process.env.DATABASE_URL) {
+      const prisma = await getPrisma();
       const evs = await prisma.evaluationRecord.findMany({
         orderBy: { createdAt: "desc" },
         take: limit,
-      });
+      }) as DbEvaluationRecord[];
       const omrs = await prisma.omrRecord.findMany({
         orderBy: { createdAt: "desc" },
         take: limit,
-      });
+      }) as DbOmrRecord[];
 
       const evsMapped: HistoryItem[] = evs.map((ev) => ({
         id: ev.id,
@@ -156,11 +204,11 @@ export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> 
         total: ev.total,
         createdAt: ev.createdAt.toISOString(),
         resultJson: {
-          ...ev.resultJson as object,
+          ...(ev.resultJson as object),
           student: {
             name: ev.studentName,
             roll: ev.studentRoll,
-            stream: ev.stream as any,
+            stream: ev.stream as Student["stream"],
             subject: ev.subject,
             answerText: ev.answerText,
             omr: [],
@@ -179,7 +227,7 @@ export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> 
         total: omr.total,
         createdAt: omr.createdAt.toISOString(),
         resultJson: {
-          ...omr.resultJson as object,
+          ...(omr.resultJson as object),
           answerKey: omr.answerKey,
           responses: omr.responses,
         },
@@ -191,7 +239,7 @@ export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> 
     } else {
       const history = await getLocalHistory();
 
-      const evsMapped: HistoryItem[] = history.evaluations.map((ev: any) => ({
+      const evsMapped: HistoryItem[] = history.evaluations.map((ev) => ({
         id: ev.id,
         type: "descriptive",
         title: `${ev.studentName} (${ev.stream})`,
@@ -214,7 +262,7 @@ export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> 
         },
       }));
 
-      const omrsMapped: HistoryItem[] = history.omrRecords.map((omr: any) => ({
+      const omrsMapped: HistoryItem[] = history.omrRecords.map((omr) => ({
         id: omr.id,
         type: "omr",
         title: `OMR Check - ${omr.total / 4} Questions`,
@@ -242,6 +290,7 @@ export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> 
 export async function deleteHistoryItem(id: string, type: "descriptive" | "omr") {
   try {
     if (process.env.DATABASE_URL) {
+      const prisma = await getPrisma();
       if (type === "descriptive") {
         await prisma.evaluationRecord.delete({ where: { id } });
       } else {
@@ -266,6 +315,7 @@ export async function deleteHistoryItem(id: string, type: "descriptive" | "omr")
 export async function clearAllHistory() {
   try {
     if (process.env.DATABASE_URL) {
+      const prisma = await getPrisma();
       await prisma.evaluationRecord.deleteMany();
       await prisma.omrRecord.deleteMany();
     } else {

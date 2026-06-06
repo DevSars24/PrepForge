@@ -1,11 +1,12 @@
 import { listRecentEvaluations, deleteHistoryItem, clearAllHistory } from "@/lib/evaluation-store";
+import { errorResponse, normalizeError } from "@/lib/debug";
 
 export async function GET() {
   try {
     const records = await listRecentEvaluations(40);
     return Response.json({ records });
   } catch (error) {
-    return Response.json({ error: "Failed to fetch history" }, { status: 500 });
+    return errorResponse(normalizeError(error, { kind: "api_error", component: "evaluations.GET" }));
   }
 }
 
@@ -28,6 +29,6 @@ export async function DELETE(req: Request) {
     if (!ok) throw new Error("Failed to delete history item");
     return Response.json({ success: true });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "Failed to process delete request" }, { status: 500 });
+    return errorResponse(normalizeError(error, { kind: "api_error", component: "evaluations.DELETE" }));
   }
 }
