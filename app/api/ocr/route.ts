@@ -1,5 +1,6 @@
 import { ocrAnswerSheets, ocrOmrSheet } from "@/lib/ai-grading";
 import { fileToBase64, hasGeminiKey } from "@/lib/gemini";
+import { errorResponse, normalizeError } from "@/lib/debug";
 
 export async function POST(req: Request) {
   try {
@@ -34,7 +35,6 @@ export async function POST(req: Request) {
     const text = await ocrAnswerSheets(images);
     return Response.json({ mode: "answer", text });
   } catch (error) {
-    console.error("OCR API error:", error);
-    return Response.json({ error: error instanceof Error ? error.message : "OCR failed" }, { status: 500 });
+    return errorResponse(normalizeError(error, { kind: "pdf_scan_error", component: "ocr.POST" }));
   }
 }

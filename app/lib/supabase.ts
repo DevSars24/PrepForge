@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { PrepForgeError, logDebugError, normalizeError } from "@/lib/debug";
 
 let client: SupabaseClient | null = null;
 
@@ -17,22 +18,32 @@ export function hasSupabase() {
 }
 
 export async function uploadEvaluationFile(file: File, folder: string) {
-  const supabase = getSupabase();
-  if (!supabase) return null;
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return null;
 
-  const path = `${folder}/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+    const path = `${folder}/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-  const { error } = await supabase.storage.from("prepforge-uploads").upload(path, buffer, {
-    contentType: file.type || "application/octet-stream",
-    upsert: false,
-  });
+    const { error } = await supabase.storage.from("prepforge-uploads").upload(path, buffer, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
 
-  if (error) {
-    console.error("Supabase upload error:", error.message);
+    if (error) {
+      throw new PrepForgeError({
+        kind: "file_upload_error",
+        component: "uploadEvaluationFile",
+        message: `Supabase upload failed for "${file.name}": ${error.message}`,
+        request: { path, fileName: file.name, fileSize: file.size, mimeType: file.type },
+        response: error,
+      });
+    }
+
+    const { data } = supabase.storage.from("prepforge-uploads").getPublicUrl(path);
+    return data.publicUrl;
+  } catch (error) {
+    logDebugError(normalizeError(error, { kind: "file_upload_error", component: "uploadEvaluationFile" }));
     return null;
   }
-
-  const { data } = supabase.storage.from("prepforge-uploads").getPublicUrl(path);
-  return data.publicUrl;
 }

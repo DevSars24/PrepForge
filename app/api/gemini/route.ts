@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FLASH_MODEL } from "@/lib/gemini";
+import { logDebugError, normalizeError, withTimeout } from "@/lib/debug";
 
 type GeminiRequest = {
   prompt?: string;
@@ -7,8 +8,10 @@ type GeminiRequest = {
 };
 
 export async function POST(req: Request) {
+  let mode: GeminiRequest["mode"];
   try {
     const body = (await req.json()) as GeminiRequest;
+    mode = body.mode;
     const userPrompt = body.prompt?.trim();
 
     if (!userPrompt) {
@@ -50,13 +53,36 @@ Task:
 ${userPrompt}
 `.trim();
 
-    const result = await model.generateContent(controlledPrompt);
-    const text = result.response.text()?.trim() || buildFallback(body.mode);
+    const result = await withTimeout(
+      model.generateContent(controlledPrompt),
+      Number(process.env.GEMINI_TIMEOUT_MS || 45000),
+      "gemini.POST",
+      { model: FLASH_MODEL, mode: body.mode, promptChars: userPrompt.length }
+    );
+    const text = result.response.text()?.trim();
+
+    if (!text) {
+      return Response.json(
+        {
+          error: "Empty Gemini response",
+          text: buildFallback(body.mode),
+          debug: {
+            kind: "invalid_response",
+            component: "gemini.POST",
+            message: "Empty Gemini response",
+            request: { model: FLASH_MODEL, mode: body.mode, promptChars: userPrompt.length },
+            response: result.response,
+          },
+        },
+        { status: 502 }
+      );
+    }
 
     return Response.json({ text });
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    return Response.json({ text: buildFallback() }, { status: 200 });
+    const debug = normalizeError(error, { kind: "gemini_error", component: "gemini.POST" });
+    logDebugError(debug);
+    return Response.json({ error: debug.message, text: buildFallback(mode), debug }, { status: debug.statusCode || 500 });
   }
 }
 

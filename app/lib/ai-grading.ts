@@ -1,6 +1,7 @@
 import { geminiEmbed, geminiGenerateJson, geminiGenerateText, imagePart } from "@/lib/gemini";
 import type { EvaluationResult, Student, Stream } from "@/lib/evaluation";
 import { SchemaType, type Schema } from "@google/generative-ai";
+import { PrepForgeError, logDebugError, normalizeError } from "@/lib/debug";
 
 export type ImageInput = { base64: string; mimeType: string; name?: string };
 
@@ -182,7 +183,7 @@ async function retrieveRubricContext(answerText: string, rubricText: string): Pr
             const chunkEmbed = await geminiEmbed(chunk);
             return { chunk, score: cosineSimilarity(answerEmbed, chunkEmbed) };
           } catch (err) {
-            console.error("RAG Chunk Embedding Error:", err);
+            logDebugError(normalizeError(err, { kind: "gemini_error", component: "retrieveRubricContext.chunkEmbedding" }));
             return null;
           }
         })
@@ -203,7 +204,7 @@ async function retrieveRubricContext(answerText: string, rubricText: string): Pr
       .map((item) => item.chunk)
       .join("\n\n---\n\n");
   } catch (error) {
-    console.error("retrieveRubricContext general fallback:", error);
+    logDebugError(normalizeError(error, { kind: "gemini_error", component: "retrieveRubricContext" }));
     return chunks.slice(0, 6).join("\n\n---\n\n");
   }
 }
@@ -250,7 +251,16 @@ Rules:
 - One entry per question, in order starting Q1
 `.trim();
 
-  return geminiGenerateJson<OmrVisionPayload>(prompt, parts, omrVisionSchema);
+  const payload = await geminiGenerateJson<OmrVisionPayload>(prompt, parts, omrVisionSchema);
+  if (!Array.isArray(payload.answers) || !Array.isArray(payload.anomalies) || typeof payload.notes !== "string") {
+    throw new PrepForgeError({
+      kind: "invalid_response",
+      component: "ocrOmrSheet",
+      message: "Gemini OMR response did not match the expected answers/anomalies/notes shape.",
+      response: payload,
+    });
+  }
+  return payload;
 }
 
 export async function gradeWithGemini(params: {
@@ -293,6 +303,14 @@ Rules:
 `.trim();
 
   const grading = await geminiGenerateJson<AiGradingPayload>(prompt, [], aiGradingSchema);
+  if (!Array.isArray(grading.stepGrades) || typeof grading.summary !== "string") {
+    throw new PrepForgeError({
+      kind: "invalid_response",
+      component: "gradeWithGemini",
+      message: "Gemini grading response did not match the expected stepGrades/summary shape.",
+      response: grading,
+    });
+  }
   return { grading, rubricContext, retrievalStage };
 }
 
