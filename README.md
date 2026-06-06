@@ -1,63 +1,307 @@
-# PrepForge: AI-Powered Faculty Evaluation Suite
-An automated grading platform designed specifically for JEE & NEET descriptive exams and OMR sheets.
+<div align="center">
+
+```
+██████╗ ██████╗ ███████╗██████╗ ███████╗ ██████╗ ██████╗  ██████╗ ███████╗
+██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝██╔═══██╗██╔══██╗██╔════╝ ██╔════╝
+██████╔╝██████╔╝█████╗  ██████╔╝█████╗  ██║   ██║██████╔╝██║  ███╗█████╗  
+██╔═══╝ ██╔══██╗██╔══╝  ██╔═══╝ ██╔══╝  ██║   ██║██╔══██╗██║   ██║██╔══╝  
+██║     ██║  ██║███████╗██║     ██║     ╚██████╔╝██║  ██║╚██████╔╝███████╗
+╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚══════╝
+```
+
+### AI-Powered Faculty Evaluation Suite
+
+**Automated grading platform for JEE & NEET descriptive exams and OMR sheets**
+
+![Next.js](https://img.shields.io/badge/Next.js_15+-000000?style=for-the-badge&logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Gemini AI](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+
+</div>
 
 ---
 
-## 🎯 The Big Picture (Founder Pitch)
-Descriptive papers (JEE/NEET) ko manually check karna, correct marking rubric apply karna, and OMR sheets ki scanning/anomalies check karna faculty ke liye bahut zyada time-consuming aur inconsistent hota hai. PrepForge is pure process ko 90% faster aur digital bana deta hai. Platform subjective handwritten answers ko transcribe karta hai, unhe exact institutional rubrics se compare karke grade karta hai, step-by-step numbers deta hai with citation/evidence, aur automated analytics report generate karke deta hai.
+## 🎯 Overview
+
+Manually checking JEE/NEET descriptive papers, applying correct marking rubrics, and scanning OMR sheets for anomalies is **extremely time-consuming and inconsistent** for faculty.
+
+**PrepForge makes this entire process 90% faster and fully digital.**
+
+The platform:
+- 📝 Transcribes subjective handwritten answers using AI vision
+- ⚖️ Grades them against exact institutional rubrics
+- 🔢 Delivers step-by-step marks with citations and evidence
+- 📊 Auto-generates detailed analytics reports
 
 ---
 
-## 🧠 1. Platform mein AI ka kahan aur kaise use hua hai? (Core AI Stack)
-Humne PrepForge mein Google Generative AI (Gemini) standard stack ka use kiya hai:
+## 🧠 Core AI Stack
 
-### Multimodal Vision OCR (`gemini-1.5-flash`):
-* **Handwritten OCR**: Agar faculty student ke written answer sheet ki photo upload karti hai, toh Gemini Vision model us handwritten sheet ko completely digital text mein convert (transcribe) kar deta hai. Yeh complex mathematical formulas, scientific notations, diagrams aur units ko accurately extract kar leta hai.
-* **Visual OMR Reading**: OMR bubble sheets ki image ko process karke bubbles detect karta hai, double-filled answers aur faint marks (ambiguous bubbles) ko detect karke anomaly alert raise karta hai.
+### 🔍 Multimodal Vision OCR — `gemini-1.5-flash`
 
-### Semantic RAG (Retrieval-Augmented Generation):
-* Agar checking ki guidelines (Marking Rubrics) bahut lambi hain, toh system input rubric ko small chunks mein tod deta hai.
-* Hum `text-embedding-004` model use karke student ke answer aur rubric chunks ka 768-dimensional Vector Embedding nikalte hain.
-* Uske baad Cosine Similarity Mathematics ka use karke select karte hain ki student ke answer se sub-topic wise kaun sa rubric path match kar raha hai: 
-  $$\text{Similarity}(A, B) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$$
-* Top-6 matching rubric chunks ko select karke Gemini model ko pass kiya jata hai. Isse token cost bachti hai aur grading 100% target oriented hoti hai.
-
-### Strict Structured JSON Evaluation:
-* Gemini ke `generationConfig` mein `responseMimeType: "application/json"` enforce kiya hai. Isse response hamesha strict structure mein milta hai:
-  * **Step-by-Step Marks**: Kis step pe kitne marks mile (max vs awarded).
-  * **Evidence Quotes**: Student ne exactly kaun si line likhi jiske basis par marks mile (No AI Hallucinations).
-  * **Confidence Score**: AI system khud batata hai ki evaluation accuracy kitne percent sahi hai (0.0 to 1.0).
-
-### Fail-Safe Offline Mode (No-DB/No-AI Fallback):
-* Agar Gemini API down ho ya key active na ho, toh application band nahi hoti. System auto-shift ho jata hai Local Evaluator pe jo regular expression keyword-matching aur synonym-matching algorithm ke throw approximate evaluation calculations perform kar deta hai.
+| Feature | Description |
+|---|---|
+| **Handwritten OCR** | Converts student answer sheet photos into fully digital text, accurately extracting mathematical formulas, scientific notations, diagrams, and units |
+| **Visual OMR Reading** | Detects filled bubbles, flags double-filled answers and faint/ambiguous marks, raises anomaly alerts |
 
 ---
 
-## 🛠️ 2. Platform ke Key Features kya hain?
+### 🧩 Semantic RAG — Retrieval-Augmented Generation
 
-### Dual Evaluation Console:
-* **Descriptive Console**: Written/Subjective papers ki checking, jahan direct images ya raw typed text ko custom grading rubrics se match karke AI evaluation kiya jata hai.
-* **OMR Console**: Auto-grading with negative marking calculation (e.g., JEE/NEET format: $+4$ for correct, $-1$ for incorrect, $0$ for blank/unmarked) and anomaly flagging.
+When marking rubrics are lengthy, PrepForge uses a smart chunking + semantic search pipeline:
 
-### Granular Citation and Evidence Tracking:
-* Platform check kiye answers ki har step scoring pe student ki real copy ka "Exact Quote" detail interface par dikhata hai. Isse bias khatam ho jata hai aur student proof dekh sakta hai.
+```
+Student Answer  ──┐
+                  ├──► text-embedding-004 ──► 768-dim Vectors
+Rubric Chunks   ──┘                                  │
+                                                      ▼
+                                          Cosine Similarity Match
+                                                      │
+                                                      ▼
+                                          Top-6 Relevant Chunks
+                                                      │
+                                                      ▼
+                                            Gemini Evaluation
+```
 
-### Strengths & Gaps Analysis (NCERT Focus):
-* Evaluation complete hote hi AI student ki detailed profile banata hai: unke weak areas, strengths kya hain, aur targeted revision guidelines (jaise: NCERT Books se kaun se chapters read karne hain aur kitne PYQs solve karne hain).
+**Cosine Similarity Formula:**
 
-### Interactive Dashboard & Unified History:
-* Next.js based live console jahan descriptive and OMR data history safe rehti hai. Faculty purani evaluations ko reload karke dynamic graphs check kar sakti hain ya direct delete kar sakti hain.
+$$\text{Similarity}(A, B) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$$
 
-### Instantly Downloadable Offline Reports:
-* Faculty ek hi click mein student report card print-friendly HTML/PDF format mein generate karke direct parents ko ya database mein save kar sakti hain.
+> Selecting only the top-6 most relevant rubric chunks reduces token cost and keeps grading 100% targeted.
 
 ---
 
-## ⚙️ 3. Technologies Used (Under the Hood)
-* **Frontend & Backend**: Next.js 15+ (App Router) + TypeScript + Tailwind CSS (Aesthetic glassmorphic & dark mode design system).
-* **AI Engine**: `@google/generative-ai` SDK (`gemini-1.5-flash` for OCR, OMR, and logic verification; `text-embedding-004` for semantic context matching).
-* **Database**: PostgreSQL (hosted on Supabase) via Prisma ORM for production, local JSON database file-based utility for offline run.
-* **Storage**: Supabase Storage Buckets to upload and manage student scanned images securely.
+### 📋 Strict Structured JSON Evaluation
+
+`responseMimeType: "application/json"` is enforced in Gemini's `generationConfig`, guaranteeing structured output every time:
+
+```json
+{
+  "stepBreakdown": [
+    {
+      "step": "Newton's Second Law Statement",
+      "maxMarks": 2,
+      "awardedMarks": 2,
+      "evidenceQuote": "Force equals mass times acceleration..."
+    }
+  ],
+  "totalAwarded": 8,
+  "totalMax": 10,
+  "confidenceScore": 0.94,
+  "feedback": "Strong conceptual understanding demonstrated."
+}
+```
+
+| Field | Purpose |
+|---|---|
+| `stepBreakdown` | Per-step marks awarded vs. maximum |
+| `evidenceQuote` | Exact student line that earned marks — **no hallucinations** |
+| `confidenceScore` | AI's self-reported evaluation confidence (0.0 – 1.0) |
+
+---
+
+### 🛡️ Fail-Safe Offline Mode
+
+If the Gemini API is unavailable, the application **does not shut down**. It automatically shifts to a **Local Evaluator** powered by:
+
+- Regular expression keyword-matching
+- Synonym-matching algorithms
+
+This ensures approximate evaluation is always available, even without internet or API access.
+
+---
+
+## 🛠️ Key Features
+
+### ⚡ Dual Evaluation Console
+
+```
+┌─────────────────────────┬─────────────────────────┐
+│   DESCRIPTIVE CONSOLE   │      OMR CONSOLE        │
+│                         │                         │
+│  • Upload answer images │  • Auto bubble detect   │
+│  • Paste typed text     │  • Negative marking     │
+│  • Custom rubric input  │    (+4 / -1 / 0)        │
+│  • AI step-by-step eval │  • Anomaly flagging     │
+└─────────────────────────┴─────────────────────────┘
+```
+
+---
+
+### 🔎 Granular Citation & Evidence Tracking
+
+Every mark awarded is backed by the **exact quote** from the student's answer sheet — displayed directly in the evaluation interface.
+
+- ✅ Zero evaluator bias
+- ✅ Full transparency for students and parents
+- ✅ Dispute-proof audit trail
+
+---
+
+### 📈 Strengths & Gaps Analysis — NCERT Focus
+
+Once evaluation is complete, AI generates a full student profile:
+
+- 🟢 **Strengths** — Topics with high conceptual clarity
+- 🔴 **Weak Areas** — Topics needing revision
+- 📚 **Revision Plan** — Specific NCERT chapters + recommended PYQ count
+
+---
+
+### 🗂️ Interactive Dashboard & Unified History
+
+- Live Next.js console with descriptive and OMR history
+- Reload past evaluations with dynamic graphs
+- Delete records directly from the dashboard
+
+---
+
+### 📄 Instantly Downloadable Reports
+
+Generate a **print-friendly HTML/PDF report card** in one click — ready to share with parents or save to the database.
+
+---
+
+## ⚙️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 15+ (App Router), TypeScript, Tailwind CSS |
+| **Design System** | Glassmorphic dark mode UI |
+| **AI Engine** | `gemini-1.5-flash` (OCR, OMR, evaluation), `text-embedding-004` (semantic RAG) |
+| **SDK** | `@google/generative-ai` |
+| **Database (Prod)** | PostgreSQL on Supabase via Prisma ORM |
+| **Database (Offline)** | Local JSON file-based utility |
+| **Storage** | Supabase Storage Buckets (secure image management) |
+
+---
+
+## 🗂️ Project Structure
+
+```
+prepforge/
+├── app/                        # Next.js App Router
+│   ├── (dashboard)/
+│   │   ├── descriptive/        # Descriptive evaluation console
+│   │   ├── omr/                # OMR evaluation console
+│   │   └── history/            # Evaluation history & analytics
+│   └── api/
+│       ├── evaluate/           # Gemini evaluation endpoints
+│       ├── omr/                # OMR processing endpoints
+│       └── embed/              # RAG embedding pipeline
+├── lib/
+│   ├── ai/
+│   │   ├── gemini.ts           # Gemini client & config
+│   │   ├── embeddings.ts       # text-embedding-004 + cosine similarity
+│   │   └── local-evaluator.ts  # Offline fallback engine
+│   ├── db/
+│   │   └── prisma.ts           # Prisma ORM client
+│   └── storage/
+│       └── supabase.ts         # Supabase storage client
+├── components/                 # Reusable UI components
+├── prisma/
+│   └── schema.prisma           # Database schema
+└── public/
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database (or Supabase project)
+- Google Generative AI API key
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/prepforge.git
+cd prepforge
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+```
+
+### Environment Variables
+
+```env
+# Google AI
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Database
+DATABASE_URL=your_postgresql_connection_string
+```
+
+### Database Setup
+
+```bash
+# Run Prisma migrations
+npx prisma migrate dev
+
+# (Optional) Seed the database
+npx prisma db seed
+```
+
+### Run the Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 📦 Scripts
+
+```bash
+npm run dev        # Start development server
+npm run build      # Build for production
+npm run start      # Start production server
+npm run lint       # Run ESLint
+npx prisma studio  # Open Prisma DB GUI
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'Add your feature'`
+4. Push to the branch: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+
+Built with ❤️ for the educators shaping India's future engineers and doctors.
+
+</div>
 
 ---
 
