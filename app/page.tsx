@@ -62,7 +62,7 @@ export default function LandingPage() {
                 Descriptive + OMR evaluation now available
               </div>
 
-              <h1 className="max-w-[620px] text-[4.15rem] font-black leading-[1.06] tracking-[-0.04em] text-white drop-shadow-[0_10px_34px_rgba(0,0,0,0.55)] sm:text-[5.6rem] lg:text-[5.8rem]">
+              <h1 className="max-w-[620px] text-[2.85rem] sm:text-[4.15rem] font-black leading-[1.06] tracking-[-0.04em] text-white drop-shadow-[0_10px_34px_rgba(0,0,0,0.55)] md:text-[5.6rem] lg:text-[5.8rem]">
                 Evaluate JEE &amp; NEET
                 <span className="block text-[#8D7BFF]">answers like experts.</span>
               </h1>
@@ -228,7 +228,7 @@ export default function LandingPage() {
                 <BadgeCheck className="text-[#22C55E]" size={25} />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-4">
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
                 {reportStats.map(([label, value]) => (
                   <div key={label} className="rounded-2xl border border-[#202235] bg-[#11111F] p-4">
                     <p className="text-xl font-black text-white">{value}</p>

@@ -287,7 +287,7 @@ export default function EvaluatePage() {
             </span>
             <span className="text-lg font-black">Prep<span className="text-teal-300">Forge</span></span>
           </Link>
-          <div className="flex gap-2">
+          <div className="hidden sm:flex gap-2">
             {(["JEE", "NEET"] as Stream[]).map((item) => (
               <button key={item} onClick={() => selectStream(item)} className={`rounded-xl border px-4 py-2 text-xs font-black ${stream === item ? "border-teal-300 bg-teal-300 text-slate-950" : "border-white/10 text-slate-400"}`}>
                 {item}
@@ -298,7 +298,86 @@ export default function EvaluatePage() {
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-5 py-7 md:px-8 lg:grid-cols-[300px_1fr]">
-        <aside className="space-y-4">
+        
+        {/* Mobile Viewports: Selectors and Horizontal Tabs */}
+        <div className="lg:hidden space-y-4">
+          {statusNote && (
+            <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+              {statusNote}
+            </div>
+          )}
+          
+          <div className="grid gap-3 grid-cols-2">
+            {/* Student Dropdown Picker */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Select Student</label>
+              <select
+                value={selectedRoll}
+                onChange={(e) => {
+                  const student = students.find((s) => s.roll === e.target.value);
+                  if (student) selectStudent(student);
+                }}
+                className="w-full bg-[#0E121A] text-white border border-white/10 rounded-xl p-2.5 text-xs font-bold outline-none focus:border-teal-300"
+              >
+                {students.filter((s) => s.stream === stream).map((s) => (
+                  <option key={s.roll} value={s.roll}>
+                    {s.name} ({s.roll})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Mobile Stream Selector */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Stream Focus</label>
+              <div className="flex rounded-xl border border-white/10 bg-[#0E121A] p-1 h-[38px]">
+                {(["JEE", "NEET"] as Stream[]).map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => selectStream(item)}
+                    className={`flex-1 rounded-lg text-xs font-black transition-all ${
+                      stream === item
+                        ? "bg-teal-300 text-slate-950"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Horizontal Scrolling Navigation */}
+          <div className="border-b border-white/5 pb-2">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Workspace View</label>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
+              {[
+                ["descriptive", "Descriptive", Brain],
+                ["omr", "OMR Check", ScanLine],
+                ["insights", "Gaps & Ranks", BarChart3],
+                ["report", "Report Preview", FileBadge],
+                ["history", "History log", History],
+              ].map(([id, label, Icon]) => (
+                <button
+                  key={id as string}
+                  onClick={() => setWorkspace(id as Workspace)}
+                  className={`flex shrink-0 snap-start items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black transition-all ${
+                    workspace === id
+                      ? "border-teal-300 bg-teal-300/10 text-white"
+                      : "border-white/10 bg-black/25 text-slate-400"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {label as string}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Viewports: Standard Sidebar Panel */}
+        <aside className="hidden lg:block space-y-4">
           <Panel icon={ShieldCheck} title="Faculty Evaluation" text="Powered by free Gemini API: Vision OCR for answer sheets & OMR, RAG rubric grading, structured marks and feedback. Add GEMINI_API_KEY in .env to enable." />
           {statusNote && (
             <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
@@ -326,7 +405,7 @@ export default function EvaluatePage() {
           <Metrics result={result} omr={omrResult} files={answerFiles.length + criteriaFiles.length + omrFiles.length} />
 
           {workspace === "descriptive" && (
-            <div className="grid gap-6 xl:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-2">
               <FeatureCard icon={Upload} title="Scanned answer sheets or images">
                 <UploadDrop inputId="answer-files" onAdd={(files) => addFiles(files, setAnswerFiles, setAnswerFileRefs)} />
                 <FileList files={answerFiles} onRemove={(index) => { setAnswerFiles((prev) => prev.filter((_, i) => i !== index)); setAnswerFileRefs((prev) => prev.filter((_, i) => i !== index)); }} />
@@ -345,7 +424,7 @@ export default function EvaluatePage() {
           )}
 
           {workspace === "omr" && (
-            <div className="grid gap-6 xl:grid-cols-[390px_1fr]">
+            <div className="grid gap-6 lg:grid-cols-[350px_1fr]">
               <FeatureCard icon={ScanLine} title="Answer key and OMR sheets">
                 <UploadDrop inputId="omr-files" onAdd={(files) => addFiles(files, setOmrFiles, setOmrFileRefs)} />
                 <FileList files={omrFiles} onRemove={(index) => { setOmrFiles((prev) => prev.filter((_, i) => i !== index)); setOmrFileRefs((prev) => prev.filter((_, i) => i !== index)); }} />
@@ -361,7 +440,7 @@ export default function EvaluatePage() {
           )}
 
           {workspace === "insights" && (
-            <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+            <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
               <div className="space-y-4">
                 <StepGrades result={result} />
                 <GapDashboard result={result} />
@@ -371,7 +450,7 @@ export default function EvaluatePage() {
           )}
 
           {workspace === "report" && (
-            <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+            <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
               <ReportPreview student={selectedStudent} result={result} omr={omrResult} />
               <FeatureCard icon={Download} title="Detailed report export">
                 <button onClick={downloadReport} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-300 px-5 py-3 text-sm font-black text-slate-950">
@@ -452,7 +531,7 @@ function Metrics({ result, omr, files }: { result: EvaluationResult; omr: Custom
     ["Uploads", files],
   ];
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
       {metrics.map(([label, value]) => (
         <div key={label} className="rounded-2xl border border-white/10 bg-black/35 p-4">
           <p className="text-2xl font-black text-teal-300">{value}</p>
@@ -573,7 +652,7 @@ function OmrDashboard({ result }: { result: CustomOmrResult }) {
   return (
     <div className="space-y-4">
       <FeatureCard icon={ScanLine} title="OMR score and bubble audit">
-        <div className="mb-4 grid gap-3 sm:grid-cols-4">
+        <div className="mb-4 grid gap-3 grid-cols-2 sm:grid-cols-4">
           {[["Correct", result.correct], ["Wrong", result.wrong], ["Blank", result.blank], ["Review", result.anomalies.length]].map(([label, value]) => (
             <div key={label} className="rounded-xl bg-white/[0.04] p-3">
               <p className="text-xl font-black text-teal-300">{value}</p>
@@ -598,7 +677,7 @@ function OmrDashboard({ result }: { result: CustomOmrResult }) {
         </div>
       </FeatureCard>
       <FeatureCard icon={BarChart3} title="Subject-wise performance">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
           {result.subjectWise.map((subject) => (
             <div key={subject.subject} className="rounded-xl border border-white/10 bg-black/30 p-4">
               <p className="font-black">{subject.subject}</p>
@@ -614,7 +693,7 @@ function OmrDashboard({ result }: { result: CustomOmrResult }) {
 
 function GapDashboard({ result }: { result: EvaluationResult }) {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
       <DashboardBlock icon={BadgeCheck} title="Strengths" items={result.strengths} />
       <DashboardBlock icon={AlertTriangle} title="Weaknesses" items={result.gaps} />
       <DashboardBlock icon={MessageSquareText} title="Improvement Suggestions" items={result.recommendations} />
