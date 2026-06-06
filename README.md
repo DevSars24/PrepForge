@@ -174,6 +174,3 @@ dev.bat     # Start dev server
 This project is proprietary. All rights reserved.
 
 ---
-
-## Summary of what to tell the Founder:
-> "PrepForge is a ready-to-scale AI grading platform for institutions. It eliminates manual checking errors, runs on a dual-mode (Cloud Postgres + Local Fallback), uses Gemini Vision OCR/OMR, and generates instant student analytical feedback. For a coaching institute or board, it saves massive faculty time and provides transparent evidence-based scoring."
