@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@mistralai/mistralai": "^2.2.5",
     "@prisma/client": "^6.19.2",
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/supabase-js": "^2.90.1",

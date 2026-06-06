@@ -1,4 +1,7 @@
-import { geminiEmbed, geminiGenerateJson, geminiGenerateText, imagePart } from "@/lib/gemini";
+import { geminiGenerateJson, imagePart } from "@/lib/gemini";
+import { mistralOCR, hasMistralKey } from "@/lib/mistralOCR";
+import { getTopRubricChunks, hasHfToken } from "@/lib/hfEmbeddings";
+import { generateAnalysis } from "@/lib/hfAnalysis";
 import type { EvaluationResult, Student, Stream } from "@/lib/evaluation";
 import { SchemaType, type Schema } from "@google/generative-ai";
 import { PrepForgeError, logDebugError, normalizeError } from "@/lib/debug";
@@ -149,82 +152,43 @@ function chunkRubric(text: string, size = 1200): string[] {
     });
 }
 
-function cosineSimilarity(a: number[], b: number[]) {
-  let dot = 0;
-  let magA = 0;
-  let magB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  if (!magA || !magB) return 0;
-  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
-}
-
 async function retrieveRubricContext(answerText: string, rubricText: string): Promise<string> {
   const chunks = chunkRubric(rubricText);
   if (!chunks.length) return rubricText;
   if (rubricText.length <= 6000) return rubricText;
 
-  try {
-    const answerEmbed = await geminiEmbed(answerText.slice(0, 2000));
-    
-    // Batch embeddings in groups of 4 to prevent HTTP 429 rate limit exceptions
-    const scored: { chunk: string; score: number }[] = [];
-    const selectedChunks = chunks.slice(0, 12); // Max 12 chunks to keep API requests bounded
-    const batchSize = 4;
-    
-    for (let i = 0; i < selectedChunks.length; i += batchSize) {
-      const batch = selectedChunks.slice(i, i + batchSize);
-      const results = await Promise.all(
-        batch.map(async (chunk) => {
-          try {
-            const chunkEmbed = await geminiEmbed(chunk);
-            return { chunk, score: cosineSimilarity(answerEmbed, chunkEmbed) };
-          } catch (err) {
-            logDebugError(normalizeError(err, { kind: "gemini_error", component: "retrieveRubricContext.chunkEmbedding" }));
-            return null;
-          }
-        })
-      );
-      
-      for (const res of results) {
-        if (res) scored.push(res);
-      }
+  // Use HuggingFace embeddings if available, otherwise fall back to chunking
+  if (hasHfToken()) {
+    try {
+      const topChunks = await getTopRubricChunks(answerText, rubricText, 6);
+      return topChunks.join("\n\n---\n\n");
+    } catch (error) {
+      logDebugError(normalizeError(error, { kind: "gemini_error", component: "retrieveRubricContext.hfEmbeddings" }));
+      // Fall through to basic chunking
     }
-
-    if (!scored.length) {
-      return chunks.slice(0, 6).join("\n\n---\n\n");
-    }
-
-    return scored
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
-      .map((item) => item.chunk)
-      .join("\n\n---\n\n");
-  } catch (error) {
-    logDebugError(normalizeError(error, { kind: "gemini_error", component: "retrieveRubricContext" }));
-    return chunks.slice(0, 6).join("\n\n---\n\n");
   }
+
+  return chunks.slice(0, 6).join("\n\n---\n\n");
 }
 
 export async function ocrAnswerSheets(images: ImageInput[]): Promise<string> {
   if (!images.length) return "";
 
-  const parts = images.map((img) => imagePart(img.base64, img.mimeType));
-  const prompt = `
-You are an OCR engine for JEE/NEET handwritten and printed answer sheets.
-Transcribe ALL student work faithfully:
-- Preserve line breaks between steps
-- Include formulas, units, diagrams described in text, and numbered lines
-- Mark unclear words as [unclear]
-- Do not grade or comment — only transcribe
+  // Use Mistral OCR if available (preferred — better for handwriting + PDFs)
+  if (hasMistralKey()) {
+    const results = await Promise.all(
+      images.map((img) => mistralOCR(img.base64, img.mimeType))
+    );
+    return results.filter(Boolean).join("\n\n");
+  }
 
-Return plain text only, no JSON.
-`.trim();
-
-  return geminiGenerateText(prompt, parts);
+  // Fallback: return empty (caller should handle gracefully)
+  throw new PrepForgeError({
+    kind: "gemini_error",
+    component: "ocrAnswerSheets",
+    message: "No OCR provider available. Set MISTRAL_API_KEY in .env for Mistral OCR.",
+    statusCode: 503,
+  });
 }
 
 export async function ocrOmrSheet(images: ImageInput[]): Promise<OmrVisionPayload> {

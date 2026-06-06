@@ -1,12 +1,13 @@
 import { ocrAnswerSheets, ocrOmrSheet } from "@/lib/ai-grading";
 import { fileToBase64, hasGeminiKey } from "@/lib/gemini";
+import { hasMistralKey } from "@/lib/mistralOCR";
 import { errorResponse, normalizeError } from "@/lib/debug";
 
 export async function POST(req: Request) {
   try {
-    if (!hasGeminiKey()) {
+    if (!hasMistralKey() && !hasGeminiKey()) {
       return Response.json(
-        { error: "GEMINI_API_KEY is not configured. Get a free key at https://aistudio.google.com/apikey" },
+        { error: "No OCR API key configured. Set MISTRAL_API_KEY (preferred for OCR) or GEMINI_API_KEY in .env" },
         { status: 503 }
       );
     }
