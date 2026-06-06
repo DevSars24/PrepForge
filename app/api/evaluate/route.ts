@@ -32,10 +32,27 @@ async function parseRequest(req: Request) {
 }
 
 export async function POST(req: Request) {
+  let student: Student = students[0];
   try {
-    const { student, answerText: inputText, rubricText, files } = await parseRequest(req);
+    const parsed = await parseRequest(req);
+    student = parsed.student;
+    const { answerText: inputText, rubricText, files } = parsed;
+
+    if (!student.name || !student.roll || !student.stream) {
+      return Response.json(
+        { error: "Invalid student details. Name, Roll Number, and Stream are required." },
+        { status: 400 }
+      );
+    }
+
     let answerText = inputText || student.answerText;
     let ocrUsed = false;
+
+    // Filter out unsupported files in production
+    const validFiles = files.filter(
+      (file) =>
+        file.type.startsWith("image/") || file.type === "application/pdf"
+    );
 
     if (!hasGeminiKey()) {
       const local = evaluateLocally(student, `${answerText}\n${rubricText}`);
@@ -45,11 +62,18 @@ export async function POST(req: Request) {
       });
     }
 
-    if (files.length) {
-      const images = await Promise.all(files.map((file) => fileToBase64(file)));
+    if (validFiles.length) {
+      const images = await Promise.all(validFiles.map((file) => fileToBase64(file)));
       const ocrText = await ocrAnswerSheets(images);
       answerText = [ocrText, answerText].filter(Boolean).join("\n\n");
       ocrUsed = true;
+    }
+
+    if (!answerText.trim()) {
+      return Response.json(
+        { error: "Answer text is empty. Please type an answer or upload readable sheets." },
+        { status: 400 }
+      );
     }
 
     const { grading, retrievalStage } = await gradeWithGemini({
@@ -65,7 +89,7 @@ export async function POST(req: Request) {
     });
 
     const fileUrls = (
-      await Promise.all(files.map((file) => uploadEvaluationFile(file, "answer-sheets")))
+      await Promise.all(validFiles.map((file) => uploadEvaluationFile(file, "answer-sheets")))
     ).filter((url): url is string => Boolean(url));
 
     const saved = await saveEvaluationRecord({
@@ -83,7 +107,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Evaluation API error:", error);
-    const local = evaluateLocally(students[0]);
+    const local = evaluateLocally(student);
     return Response.json({
       ...local,
       warning: error instanceof Error ? `Gemini evaluation failed: ${error.message}` : "Gemini evaluation failed. Returned local fallback.",
