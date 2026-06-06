@@ -1,6 +1,8 @@
 import { gradeWithGemini, mapAiGradingToResult, ocrAnswerSheets } from "@/lib/ai-grading";
 import { saveEvaluationRecord } from "@/lib/evaluation-store";
 import { fileToBase64, hasGeminiKey, isSupportedScanMimeType } from "@/lib/gemini";
+import { hasMistralKey } from "@/lib/mistralOCR";
+import { generateAnalysis } from "@/lib/hfAnalysis";
 import { evaluateLocally, students, type Student } from "@/lib/evaluation";
 import { uploadEvaluationFile } from "@/lib/supabase";
 import { logDebugError, normalizeError } from "@/lib/debug";
@@ -72,11 +74,11 @@ export async function POST(req: Request) {
     const validFiles = files;
     const validCriteriaFiles = criteriaFiles;
 
-    if (!hasGeminiKey()) {
+    if (!hasGeminiKey() && !hasMistralKey()) {
       const local = evaluateLocally(student, `${answerText}\n${rubricText}`);
       return Response.json({
         ...local,
-        warning: "GEMINI_API_KEY is not configured. Get a free key at https://aistudio.google.com/apikey",
+        warning: "No AI API keys configured. Set GEMINI_API_KEY and/or MISTRAL_API_KEY. Get free keys at https://aistudio.google.com/apikey and https://console.mistral.ai/",
       });
     }
 
@@ -112,6 +114,14 @@ export async function POST(req: Request) {
       ocrUsed,
     });
 
+    // Generate HF strengths/gaps analysis (non-blocking — if it fails, we skip it)
+    let hfAnalysis: string | undefined;
+    try {
+      hfAnalysis = await generateAnalysis(result as unknown as Record<string, unknown>);
+    } catch (err) {
+      console.warn("[PrepForge] HF analysis failed, skipping:", err);
+    }
+
     const fileUrls = (
       await Promise.all([
         ...validFiles.map((file) => uploadEvaluationFile(file, "answer-sheets")),
@@ -129,6 +139,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       ...result,
+      hfAnalysis,
       savedId: saved?.id,
       fileUrls,
     });
