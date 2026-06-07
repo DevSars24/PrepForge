@@ -106,8 +106,18 @@ async function runOcr(imageBuffer: Buffer, label: string): Promise<OcrResult> {
     // Detect mime type: PNG starts with 0x89 (137)
     const mimeType = imageBuffer[0] === 137 ? "image/png" : "image/jpeg";
 
-    // We call the internal Next.js API route so we don't duplicate
-    // OCR provider logic here — DRY principle.
+    // Server-side optimization: Run OCR directly in memory to avoid Next.js request size limits and loop-back latency
+    if (typeof window === "undefined") {
+      const { ocrAnswerSheets } = await import("../../app/lib/ai-grading");
+      const text = await ocrAnswerSheets([{
+        base64,
+        mimeType,
+        name: `ocr-input-${label}.png`
+      }]);
+      return { text };
+    }
+
+    // Client-side fallback: Call the Next.js API route
     const formData = new FormData();
     const blob = new Blob([imageBuffer as any], { type: mimeType });
     formData.append("files", blob, `ocr-input-${label}.png`);
