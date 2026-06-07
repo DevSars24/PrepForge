@@ -60,6 +60,7 @@ const criteriaText = `Step marking criteria:
 export default function EvaluatePage() {
   const { user } = useUser();
   const [workspace, setWorkspace] = useState<Workspace>("descriptive");
+  const [showConfigModal, setShowConfigModal] = useState(false);
 
   // Dynamic Student details states
   const [studentName, setStudentName] = useState("Aarav Sharma");
@@ -431,154 +432,201 @@ export default function EvaluatePage() {
           </div>
         )}
 
-        {/* Console Dashboard Grid */}
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[380px_1fr]">
-          
-          {/* Left Column: Student Details Configurator Form */}
-          <aside className="space-y-4">
-            <div className="student-form-card">
-              <h2>
-                <UserCheck size={18} style={{ color: "var(--accent)" }} />
-                Student Configurator
-              </h2>
+        {/* Console Dashboard Flex Container */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-              {/* Prefill helper */}
-              <div className="form-group" style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)" }}>Quick Load Demo Student</label>
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) handlePrefill(e.target.value);
-                  }}
-                  defaultValue=""
-                  className="form-group select"
-                  style={{
-                    padding: "10px 14px",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "0.85rem",
-                    background: "var(--bg-primary)",
-                    color: "var(--text-primary)",
-                    cursor: "pointer",
-                    outline: "none",
-                    marginTop: 4,
-                  }}
+          {/* Active Student Details Banner */}
+          <div className="result-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24, borderLeft: "4px solid var(--accent)", padding: "20px 24px", margin: 0 }}>
+            <div style={{ flex: 1, minWidth: "260px" }}>
+              <p style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--accent)" }}>Currently Evaluating</p>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: 2 }}>{studentName || "Configure Student Details"}</h2>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.5 }}>
+                Roll: <strong>{rollNumber || "N/A"}</strong> | Stream: <strong>{stream}</strong> | Subject: <strong>{subject || "General"}</strong>
+                {batch && <> | Batch: <strong>{batch}</strong></>}
+                {section && <> | Sec: <strong>{section}</strong></>}
+                {examType && <> | Exam: <strong>{examType}</strong></>}
+              </p>
+            </div>
+            
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ background: "var(--bg-surface)", padding: "8px 14px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "90px" }}>
+                  <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 650 }}>Descriptive</p>
+                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{result.score}/100</p>
+                </div>
+                <div style={{ background: "var(--bg-surface)", padding: "8px 14px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "90px" }}>
+                  <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 650 }}>OMR score</p>
+                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{omrResult.score}/{omrResult.total}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowConfigModal(true)}
+                className="btn-primary animate-fade"
+                style={{ padding: "10px 18px", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+              >
+                <UserCheck size={14} />
+                Configure Details
+              </button>
+            </div>
+          </div>
+
+          {/* Student Configurator Modal overlay */}
+          {showConfigModal && (
+            <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.3)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+              <div className="student-form-card" style={{ maxWidth: "480px", width: "100%", margin: 0, position: "relative", boxShadow: "var(--shadow-lg)", border: "1px solid var(--border)", background: "var(--bg-card)", padding: 24, borderRadius: "var(--radius-lg)" }}>
+                <button
+                  onClick={() => setShowConfigModal(false)}
+                  style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)" }}
+                  aria-label="Close modal"
                 >
-                  <option value="" disabled>-- Select a demo student --</option>
-                  {students.map((s) => (
-                    <option key={s.roll} value={s.roll}>
-                      {s.name} ({s.stream})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <X size={18} />
+                </button>
+                
+                <h2 style={{ fontSize: "1.2rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <UserCheck size={18} style={{ color: "var(--accent)" }} />
+                  Student Configurator
+                </h2>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 16 }}>
+                  Define the student parameters below. Evaluation records and score mappings will bind to these settings.
+                </p>
 
-              <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "16px 0" }} />
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div className="form-group">
-                  <label htmlFor="student-name">Student Name</label>
-                  <input
-                    id="student-name"
-                    type="text"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    placeholder="Enter student name"
-                  />
+                {/* Prefill helper */}
+                <div className="form-group" style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)" }}>Quick Load Demo Student</label>
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handlePrefill(e.target.value);
+                      }
+                    }}
+                    defaultValue=""
+                    className="form-group select"
+                    style={{
+                      padding: "10px 14px",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "0.85rem",
+                      background: "var(--bg-primary)",
+                      color: "var(--text-primary)",
+                      cursor: "pointer",
+                      outline: "none",
+                      marginTop: 4,
+                      width: "100%"
+                    }}
+                  >
+                    <option value="" disabled>-- Select a demo student --</option>
+                    {students.map((s) => (
+                      <option key={s.roll} value={s.roll}>
+                        {s.name} ({s.stream})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="roll-number">Roll Number</label>
-                  <input
-                    id="roll-number"
-                    type="text"
-                    value={rollNumber}
-                    onChange={(e) => setRollNumber(e.target.value)}
-                    placeholder="e.g. JEE-2026-014"
-                  />
-                </div>
+                <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "14px 0" }} />
 
-                <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div className="form-group">
-                    <label htmlFor="student-batch">Batch</label>
+                    <label htmlFor="student-name">Student Name</label>
                     <input
-                      id="student-batch"
+                      id="student-name"
                       type="text"
-                      value={batch}
-                      onChange={(e) => setBatch(e.target.value)}
-                      placeholder="e.g. Super-30"
+                      value={studentName}
+                      onChange={(e) => setStudentName(e.target.value)}
+                      placeholder="Enter student name"
+                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
                     />
                   </div>
+
                   <div className="form-group">
-                    <label htmlFor="student-section">Section</label>
+                    <label htmlFor="roll-number">Roll Number</label>
                     <input
-                      id="student-section"
+                      id="roll-number"
                       type="text"
-                      value={section}
-                      onChange={(e) => setSection(e.target.value)}
-                      placeholder="e.g. A"
+                      value={rollNumber}
+                      onChange={(e) => setRollNumber(e.target.value)}
+                      placeholder="e.g. JES-2026-004"
+                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
                     />
+                  </div>
+
+                  <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10, display: "grid" }}>
+                    <div className="form-group">
+                      <label htmlFor="student-batch">Batch</label>
+                      <input
+                        id="student-batch"
+                        type="text"
+                        value={batch}
+                        onChange={(e) => setBatch(e.target.value)}
+                        placeholder="e.g. Batch-A"
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="student-section">Section</label>
+                      <input
+                        id="student-section"
+                        type="text"
+                        value={section}
+                        onChange={(e) => setSection(e.target.value)}
+                        placeholder="e.g. Sec-1"
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="student-subject">Subject Focus</label>
+                    <input
+                      id="student-subject"
+                      type="text"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="e.g. Physics"
+                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                    />
+                  </div>
+
+                  <div className="form-grid" style={{ gridTemplateColumns: "1fr 1.2fr", gap: 10, display: "grid" }}>
+                    <div className="form-group">
+                      <label htmlFor="student-stream">Stream Focus</label>
+                      <select
+                        id="student-stream"
+                        value={stream}
+                        onChange={(e) => setStream(e.target.value as Stream)}
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      >
+                        <option value="JEE">JEE</option>
+                        <option value="NEET">NEET</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="student-exam">Exam Type</label>
+                      <input
+                        id="student-exam"
+                        type="text"
+                        value={examType}
+                        onChange={(e) => setExamType(e.target.value)}
+                        placeholder="e.g. Mains Mock"
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="student-subject">Subject Focus</label>
-                  <input
-                    id="student-subject"
-                    type="text"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. Physics + Maths"
-                  />
-                </div>
-
-                <div className="form-grid" style={{ gridTemplateColumns: "1fr 1.2fr", gap: 10 }}>
-                  <div className="form-group">
-                    <label htmlFor="student-stream">Stream</label>
-                    <select
-                      id="student-stream"
-                      value={stream}
-                      onChange={(e) => setStream(e.target.value as Stream)}
-                    >
-                      <option value="JEE">JEE</option>
-                      <option value="NEET">NEET</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="student-exam">Exam Type</label>
-                    <input
-                      id="student-exam"
-                      type="text"
-                      value={examType}
-                      onChange={(e) => setExamType(e.target.value)}
-                      placeholder="e.g. Mains Mock"
-                    />
-                  </div>
-                </div>
+                <button
+                  onClick={() => setShowConfigModal(false)}
+                  className="btn-primary"
+                  style={{ marginTop: 20, width: "100%", justifyContent: "center", padding: "12px", cursor: "pointer" }}
+                >
+                  Save & Apply Config
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Live Metrics panel */}
-            <div className="student-form-card" style={{ padding: 20 }}>
-              <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 12, color: "var(--text-secondary)" }}>
-                Current Loaded Scores
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div style={{ background: "var(--bg-primary)", padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Descriptive</p>
-                  <p style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent)" }}>{result.score}/100</p>
-                </div>
-                <div style={{ background: "var(--bg-primary)", padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>OMR Sheet</p>
-                  <p style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent)" }}>{omrResult.score}/{omrResult.total}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar list of evaluations from history */}
-            <RecentEvaluationsList historyItems={historyItems} onLoad={loadHistoryItem} />
-          </aside>
-
-          {/* Right Column: Workspaces & Dynamic Results */}
+          {/* Workspaces & Dynamic Results */}
           <section className="min-w-0 space-y-4">
             
             {/* Top Workspace Tab Navs */}
@@ -687,6 +735,9 @@ export default function EvaluatePage() {
                       )}
                     </button>
                   </div>
+
+                  {/* Recent Evaluations Quick Pick list */}
+                  <RecentEvaluationsList historyItems={historyItems} onLoad={loadHistoryItem} />
                 </div>
               )}
 
