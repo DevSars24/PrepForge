@@ -648,12 +648,12 @@ export default function CleanPremiumLanding() {
 
         <div
           ref={featuresGridRef}
-          className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full"
+          className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full"
         >
           {featuresList.map((feat, idx) => (
             <div
               key={idx}
-              className="feat-card group border border-slate-200/80 rounded-2xl p-8 md:p-10 flex flex-col justify-between bg-white shadow-[0_4px_20px_rgba(15,23,42,0.02)] cursor-pointer"
+              className="feat-card group border border-slate-200/80 rounded-xl p-5 flex flex-col justify-between bg-white shadow-[0_2px_12px_rgba(15,23,42,0.02)] cursor-pointer"
               style={{
                 opacity: 0,
                 transition:
@@ -661,11 +661,11 @@ export default function CleanPremiumLanding() {
               }}
               onMouseEnter={(e) => {
                 gsap.to(e.currentTarget, {
-                  y: -5,
+                  y: -4,
                   boxShadow:
                     feat.accent === "orange"
-                      ? "0 16px 40px rgba(249,115,22,0.1)"
-                      : "0 16px 40px rgba(124,58,237,0.1)",
+                      ? "0 12px 28px rgba(249,115,22,0.1)"
+                      : "0 12px 28px rgba(124,58,237,0.1)",
                   duration: 0.3,
                   ease: "power2.out",
                 });
@@ -673,16 +673,16 @@ export default function CleanPremiumLanding() {
               onMouseLeave={(e) => {
                 gsap.to(e.currentTarget, {
                   y: 0,
-                  boxShadow: "0 4px 20px rgba(15,23,42,0.02)",
+                  boxShadow: "0 2px 12px rgba(15,23,42,0.02)",
                   duration: 0.35,
                   ease: "power2.out",
                 });
               }}
             >
               <div>
-                <div className="mb-6">
+                <div className="mb-3">
                   <span
-                    className={`inline-block text-xs font-bold px-3.5 py-1 rounded-full uppercase tracking-wider ${
+                    className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                       feat.accent === "orange"
                         ? "bg-orange-50 text-[#F97316]"
                         : "bg-purple-50 text-[#7C3AED]"
@@ -691,20 +691,20 @@ export default function CleanPremiumLanding() {
                     {feat.badge}
                   </span>
                 </div>
-                <h4 className="text-2xl font-bold text-[#0F172A] mb-4">
+                <h4 className="text-lg font-bold text-[#0F172A] mb-2">
                   {feat.title}
                 </h4>
-                <p className="text-slate-600 text-sm md:text-base leading-relaxed">
+                <p className="text-slate-600 text-xs leading-relaxed">
                   {feat.desc}
                 </p>
               </div>
-              <div className="mt-8 flex justify-between items-center pt-6 border-t border-slate-100 w-full">
-                <div className="p-3 rounded-xl bg-slate-50 group-hover:scale-110 transition-transform duration-300">
+              <div className="mt-5 flex justify-between items-center pt-4 border-t border-slate-100 w-full">
+                <div className="p-2 rounded-lg bg-slate-50 group-hover:scale-110 transition-transform duration-300">
                   {feat.icon}
                 </div>
                 <Link
                   href="/evaluate"
-                  className={`text-sm font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                  className={`text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors ${
                     feat.accent === "orange"
                       ? "text-[#F97316] hover:text-[#EA580C]"
                       : "text-[#7C3AED] hover:text-[#6D28D9]"
@@ -712,7 +712,7 @@ export default function CleanPremiumLanding() {
                 >
                   Try Now{" "}
                   <ArrowRight
-                    size={14}
+                    size={12}
                     className="group-hover:translate-x-1 transition-transform duration-200"
                   />
                 </Link>
@@ -749,22 +749,22 @@ export default function CleanPremiumLanding() {
 
           <div
             ref={beforeAfterRef}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full"
           >
             {/* Pain */}
             <div
-              className="ba-card bg-white border border-slate-200/80 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_20px_rgba(15,23,42,0.02)]"
+              className="ba-card bg-white border border-slate-200/80 p-6 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-[0_2px_12px_rgba(15,23,42,0.02)]"
               style={{ opacity: 0 }}
             >
-              <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#F97316]" />
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#F97316]" />
               <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-50 text-[#F97316] mb-6">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-[#F97316] mb-4">
                   Manual Grading Process
                 </div>
-                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">
+                <h4 className="text-xl font-bold text-[#0F172A] mb-4">
                   Stack &amp; Pen Verification
                 </h4>
-                <ul className="space-y-6">
+                <ul className="space-y-4">
                   {[
                     {
                       title: "Inconsistent step marking",
@@ -779,15 +779,15 @@ export default function CleanPremiumLanding() {
                       desc: "Students only see raw numeric scores. Teachers get no structured reports on syllabus topics requiring attention.",
                     },
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-orange-50 text-[#F97316] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                         ✗
                       </span>
                       <div>
-                        <p className="font-semibold text-[#0F172A] text-sm md:text-base">
+                        <p className="font-semibold text-[#0F172A] text-sm">
                           {item.title}
                         </p>
-                        <p className="text-xs md:text-sm text-slate-600 mt-1">
+                        <p className="text-xs text-slate-600 mt-0.5">
                           {item.desc}
                         </p>
                       </div>
@@ -795,25 +795,25 @@ export default function CleanPremiumLanding() {
                   ))}
                 </ul>
               </div>
-              <p className="text-xs text-slate-400 mt-10 border-t border-slate-100 pt-4">
+              <p className="text-xs text-slate-400 mt-6 border-t border-slate-100 pt-3">
                 Manual speed average: 12-15 answer sheets per hour.
               </p>
             </div>
 
             {/* Solution */}
             <div
-              className="ba-card bg-white border border-slate-300 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_25px_rgba(15,23,42,0.03)] ring-2 ring-[#7C3AED]/10"
+              className="ba-card bg-white border border-slate-300 p-6 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-[0_2px_16px_rgba(15,23,42,0.03)] ring-1 ring-[#7C3AED]/10"
               style={{ opacity: 0 }}
             >
-              <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#7C3AED]" />
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#7C3AED]" />
               <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-[#7C3AED] mb-6">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-[#7C3AED] mb-4">
                   PrepForge Console
                 </div>
-                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">
+                <h4 className="text-xl font-bold text-[#0F172A] mb-4">
                   AI-Powered Evaluation Suite
                 </h4>
-                <ul className="space-y-6">
+                <ul className="space-y-4">
                   {[
                     {
                       title: "Step-wise evidence matching",
@@ -828,15 +828,15 @@ export default function CleanPremiumLanding() {
                       desc: "Generates real-time, topic-wise analysis dashboards charting cohorts' structural gaps with NCERT revision tips.",
                     },
                   ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-purple-50 text-[#7C3AED] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                         ✓
                       </span>
                       <div>
-                        <p className="font-semibold text-[#0F172A] text-sm md:text-base">
+                        <p className="font-semibold text-[#0F172A] text-sm">
                           {item.title}
                         </p>
-                        <p className="text-xs md:text-sm text-slate-600 mt-1">
+                        <p className="text-xs text-slate-600 mt-0.5">
                           {item.desc}
                         </p>
                       </div>
@@ -844,17 +844,17 @@ export default function CleanPremiumLanding() {
                   ))}
                 </ul>
               </div>
-              <div className="mt-10 pt-4 border-t border-slate-100 flex items-center justify-between w-full">
+              <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between w-full">
                 <p className="text-xs text-slate-400">
                   Processing speed average: 180 documents per minute.
                 </p>
                 <Link
                   href="/evaluate"
-                  className="text-sm font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer group"
+                  className="text-xs font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer group"
                 >
                   Launch Console{" "}
                   <ArrowRight
-                    size={14}
+                    size={12}
                     className="ml-0.5 group-hover:translate-x-1 transition-transform duration-200"
                   />
                 </Link>
@@ -1080,23 +1080,22 @@ export default function CleanPremiumLanding() {
             </p>
           </div>
 
-          {/* Enlarged pricing grid — larger cards */}
+          {/* Compact pricing grid — small cards */}
           <div
             ref={pricingGridRef}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto w-full items-stretch"
           >
             {/* Free Sandbox */}
             <div
-              className="price-card group bg-white border border-slate-200/60 rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
+              className="price-card group bg-white border border-slate-200/60 rounded-xl p-5 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
               style={{
                 opacity: 0,
-                minHeight: "480px",
                 transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
               }}
               onMouseEnter={(e) => {
                 gsap.to(e.currentTarget, {
-                  y: -7,
-                  boxShadow: "0 20px 48px rgba(15,23,42,0.06)",
+                  y: -5,
+                  boxShadow: "0 16px 36px rgba(15,23,42,0.06)",
                   duration: 0.3,
                   ease: "power2.out",
                 });
@@ -1111,26 +1110,26 @@ export default function CleanPremiumLanding() {
               }}
             >
               <div>
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
                   Free Sandbox
                 </h4>
-                <div className="flex items-baseline gap-1 mb-7">
-                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                <div className="flex items-baseline gap-0.5 mb-4">
+                  <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
                     $0
                   </span>
-                  <span className="text-sm text-slate-400 font-semibold">
+                  <span className="text-xs text-slate-400 font-semibold">
                     / month
                   </span>
                 </div>
-                <ul className="space-y-4 mb-10">
+                <ul className="space-y-2.5 mb-6">
                   {[
                     "10 descriptive sheets check/mo",
                     "Standard OMR sheets (5/mo)",
                     "Basic NCERT evidence grading",
                     "7-day evaluation history",
                   ].map((feat, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                      <CheckCircle2 size={16} className="text-slate-300 shrink-0 mt-0.5" />
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={14} className="text-slate-300 shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </li>
                   ))}
@@ -1138,7 +1137,7 @@ export default function CleanPremiumLanding() {
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
+                className="w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
                 Start Sandbox
               </Link>
@@ -1146,16 +1145,15 @@ export default function CleanPremiumLanding() {
 
             {/* Starter */}
             <div
-              className="price-card group bg-white border border-slate-200/60 rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
+              className="price-card group bg-white border border-slate-200/60 rounded-xl p-5 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
               style={{
                 opacity: 0,
-                minHeight: "480px",
                 transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
               }}
               onMouseEnter={(e) => {
                 gsap.to(e.currentTarget, {
-                  y: -7,
-                  boxShadow: "0 20px 48px rgba(249,115,22,0.08)",
+                  y: -5,
+                  boxShadow: "0 16px 36px rgba(249,115,22,0.08)",
                   duration: 0.3,
                   ease: "power2.out",
                 });
@@ -1170,26 +1168,26 @@ export default function CleanPremiumLanding() {
               }}
             >
               <div>
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
                   Starter Portal
                 </h4>
-                <div className="flex items-baseline gap-1 mb-7">
-                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                <div className="flex items-baseline gap-0.5 mb-4">
+                  <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
                     $79
                   </span>
-                  <span className="text-sm text-slate-400 font-semibold">
+                  <span className="text-xs text-slate-400 font-semibold">
                     / month
                   </span>
                 </div>
-                <ul className="space-y-4 mb-10">
+                <ul className="space-y-2.5 mb-6">
                   {[
                     "Process up to 100 papers/mo",
                     "Basic handwriting OCR mapping",
                     "Standard OMR checking (50 sheets/mo)",
                     "Basic gap analysis dashboard",
                   ].map((feat, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                      <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={14} className="text-[#F97316] shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </li>
                   ))}
@@ -1197,7 +1195,7 @@ export default function CleanPremiumLanding() {
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
+                className="w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
                 Get Started
               </Link>
@@ -1205,16 +1203,15 @@ export default function CleanPremiumLanding() {
 
             {/* Pro (featured) */}
             <div
-              className="price-card group bg-white border-2 border-[#7C3AED] rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_8px_40px_rgba(124,58,237,0.08)] relative cursor-pointer"
+              className="price-card group bg-white border-2 border-[#7C3AED] rounded-xl p-5 flex flex-col justify-between shadow-[0_8px_32px_rgba(124,58,237,0.08)] relative cursor-pointer"
               style={{
                 opacity: 0,
-                minHeight: "480px",
                 transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
               }}
               onMouseEnter={(e) => {
                 gsap.to(e.currentTarget, {
-                  y: -7,
-                  boxShadow: "0 24px 56px rgba(124,58,237,0.18)",
+                  y: -5,
+                  boxShadow: "0 20px 44px rgba(124,58,237,0.18)",
                   duration: 0.3,
                   ease: "power2.out",
                 });
@@ -1222,28 +1219,28 @@ export default function CleanPremiumLanding() {
               onMouseLeave={(e) => {
                 gsap.to(e.currentTarget, {
                   y: 0,
-                  boxShadow: "0 8px 40px rgba(124,58,237,0.08)",
+                  boxShadow: "0 8px 32px rgba(124,58,237,0.08)",
                   duration: 0.35,
                   ease: "power2.out",
                 });
               }}
             >
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#7C3AED] text-white text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider z-20 shadow-sm">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7C3AED] text-white text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider z-20 shadow-sm">
                 MOST POPULAR
               </span>
               <div>
-                <h4 className="text-[11px] font-bold text-[#7C3AED] uppercase tracking-widest mb-5">
+                <h4 className="text-[10px] font-bold text-[#7C3AED] uppercase tracking-widest mb-3">
                   Pro Faculty
                 </h4>
-                <div className="flex items-baseline gap-1 mb-7">
-                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                <div className="flex items-baseline gap-0.5 mb-4">
+                  <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
                     $189
                   </span>
-                  <span className="text-sm text-slate-400 font-semibold">
+                  <span className="text-xs text-slate-400 font-semibold">
                     / month
                   </span>
                 </div>
-                <ul className="space-y-4 mb-10">
+                <ul className="space-y-2.5 mb-6">
                   {[
                     "Unlimited descriptive answer sheets",
                     "Chain-of-Thought AI grading logic",
@@ -1251,8 +1248,8 @@ export default function CleanPremiumLanding() {
                     "Advanced cohort gap analytics",
                     "HTML/PDF evaluation reports export",
                   ].map((feat, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                      <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={14} className="text-[#7C3AED] shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </li>
                   ))}
@@ -1260,7 +1257,7 @@ export default function CleanPremiumLanding() {
               </div>
               <Link
                 href="/evaluate"
-                className="group/btn relative w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all block cursor-pointer shadow-[0_4px_16px_rgba(124,58,237,0.25)] hover:shadow-[0_8px_24px_rgba(124,58,237,0.38)] overflow-hidden"
+                className="group/btn relative w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all block cursor-pointer shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:shadow-[0_8px_20px_rgba(124,58,237,0.38)] overflow-hidden"
               >
                 <span className="relative z-10">Start Free Trial</span>
                 <span className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-500 ease-in-out bg-gradient-to-r from-transparent via-white/15 to-transparent" />
@@ -1269,16 +1266,15 @@ export default function CleanPremiumLanding() {
 
             {/* Enterprise */}
             <div
-              className="price-card group bg-white border border-slate-200/60 rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
+              className="price-card group bg-white border border-slate-200/60 rounded-xl p-5 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
               style={{
                 opacity: 0,
-                minHeight: "480px",
                 transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
               }}
               onMouseEnter={(e) => {
                 gsap.to(e.currentTarget, {
-                  y: -7,
-                  boxShadow: "0 20px 48px rgba(249,115,22,0.07)",
+                  y: -5,
+                  boxShadow: "0 16px 36px rgba(249,115,22,0.07)",
                   duration: 0.3,
                   ease: "power2.out",
                 });
@@ -1293,26 +1289,26 @@ export default function CleanPremiumLanding() {
               }}
             >
               <div>
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
                   Enterprise System
                 </h4>
-                <div className="flex items-baseline gap-1 mb-7">
-                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                <div className="flex items-baseline gap-0.5 mb-4">
+                  <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
                     $449
                   </span>
-                  <span className="text-sm text-slate-400 font-semibold">
+                  <span className="text-xs text-slate-400 font-semibold">
                     / month
                   </span>
                 </div>
-                <ul className="space-y-4 mb-10">
+                <ul className="space-y-2.5 mb-6">
                   {[
                     "Institutional API integration layer",
                     "Unified billing for department profiles",
                     "SLA guaranteed uptime and support",
                     "Dedicated account training & support",
                   ].map((feat, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                      <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={14} className="text-[#F97316] shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </li>
                   ))}
@@ -1320,7 +1316,7 @@ export default function CleanPremiumLanding() {
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
+                className="w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
                 Contact Team
               </Link>
