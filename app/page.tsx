@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { gsap } from "gsap";
 import {
   ArrowRight,
   BadgeCheck,
@@ -20,11 +22,15 @@ const evaluationCards = [
     icon: FileText,
     title: "Descriptive Answer Evaluation",
     text: "Faculty can upload scanned answer sheets or images. The system evaluates answers based on predefined marking criteria and generates marks, feedback, strengths, weaknesses, and improvement suggestions.",
+    badge: "JEE/NEET Descriptive",
+    color: "bg-indigo-50 text-indigo-600 border-indigo-100",
   },
   {
     icon: ScanLine,
     title: "OMR Evaluation",
     text: "Faculty uploads the answer key and OMR sheets. PrepForge checks responses, calculates scores, and creates detailed accuracy, subject-wise performance, and rank analysis reports.",
+    badge: "Bubble Sheet Audit",
+    color: "bg-teal-50 text-teal-600 border-teal-100",
   },
 ];
 
@@ -43,158 +49,210 @@ const reportStats = [
 ];
 
 export default function LandingPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const ctx = gsap.context(() => {
+      // Hero elements entrance
+      gsap.fromTo(
+        ".hero-badge",
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }
+      );
+
+      gsap.fromTo(
+        ".hero-title",
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1, delay: 0.15, ease: "power3.out" }
+      );
+
+      gsap.fromTo(
+        ".hero-desc",
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1, delay: 0.3, ease: "power3.out" }
+      );
+
+      gsap.fromTo(
+        ".hero-btns",
+        { y: 15, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, delay: 0.45, ease: "power3.out" }
+      );
+
+      gsap.fromTo(
+        ".hero-dashboard",
+        { scale: 0.96, opacity: 0, y: 10 },
+        { scale: 1, opacity: 1, y: 0, duration: 1.1, delay: 0.35, ease: "power3.out" }
+      );
+
+      // Cards stagger reveal
+      gsap.fromTo(
+        ".stagger-card",
+        { y: 40, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, stagger: 0.15, ease: "power3.out", scrollTrigger: { trigger: ".stagger-card", start: "top 85%" } }
+      );
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <>
+    <div ref={containerRef} className="min-h-screen bg-[#FAF9FC] text-slate-900 selection:bg-indigo-150 selection:text-indigo-700">
       <Navbar />
-      <main className="min-h-screen overflow-x-hidden bg-[#03040A] text-white">
-        <section className="relative min-h-[860px] px-5 pb-20 pt-28 md:min-h-[780px] md:pt-36">
+      <main className="overflow-x-hidden">
+        {/* Hero Section */}
+        <section className="relative min-h-[860px] px-5 pb-20 pt-28 md:min-h-[780px] md:pt-36 flex items-center justify-center">
           <div
-            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-[0.56]"
+            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-[0.07] pointer-events-none"
             style={{ backgroundImage: "url('/assets/main-page.jpg')" }}
           />
-          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_42%_35%,rgba(124,111,224,0.08),transparent_28%),linear-gradient(90deg,#03040A_0%,rgba(3,4,10,0.55)_42%,#03040A_100%)]" />
-          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(3,4,10,0.22)_42%,#03040A_100%)]" />
+          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_42%_35%,rgba(79,70,229,0.04),transparent_32%),linear-gradient(180deg,transparent 60%,#FAF9FC 100%)] pointer-events-none" />
 
-          <div className="relative z-10 mx-auto grid max-w-[1180px] items-center gap-12 pt-16 lg:grid-cols-[1.05fr_.95fr] lg:pt-24">
+          <div className="relative z-10 mx-auto grid max-w-[1180px] items-center gap-12 pt-16 lg:grid-cols-[1.05fr_.95fr] lg:pt-20 w-full">
             <div>
-              <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#7768DA]/30 bg-[#151225]/82 px-4 py-2 text-[11px] font-bold text-[#B3AAFF] shadow-[0_0_26px_rgba(124,111,224,0.16)] backdrop-blur">
-                <span className="h-2 w-2 rounded-full bg-[#8B7FE8] shadow-[0_0_12px_rgba(139,127,232,0.95)]" />
-                Descriptive + OMR evaluation now available
+              <div className="hero-badge opacity-0 mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/70 px-4 py-2 text-[11px] font-bold text-indigo-700 shadow-sm backdrop-blur">
+                <span className="h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.7)]" />
+                Descriptive + OMR Evaluation Suite
               </div>
 
-              <h1 className="max-w-[620px] text-[2.85rem] sm:text-[4.15rem] font-black leading-[1.06] tracking-[-0.04em] text-white drop-shadow-[0_10px_34px_rgba(0,0,0,0.55)] md:text-[5.6rem] lg:text-[5.8rem]">
+              <h1 className="hero-title opacity-0 max-w-[620px] text-[2.85rem] sm:text-[4.15rem] font-black leading-[1.08] tracking-[-0.03em] text-slate-900 drop-shadow-sm md:text-[5.2rem] lg:text-[5.4rem]">
                 Evaluate JEE &amp; NEET
-                <span className="block text-[#8D7BFF]">answers like experts.</span>
+                <span className="block text-indigo-600">answers like experts.</span>
               </h1>
 
-              <p className="mt-8 max-w-[620px] text-[17px] font-semibold leading-8 text-[#A2A6BA]">
-                PrepForge helps faculty upload scanned answer sheets, check OMRs,
-                generate AI marks, identify topic-wise gaps, and export college-ready
-                student reports.
+              <p className="hero-desc opacity-0 mt-8 max-w-[580px] text-[17px] font-medium leading-8 text-slate-500">
+                PrepForge helps faculty upload scanned answer sheets, audit OMR bubble sheets,
+                generate automated AI marks with quotes, identify concept gaps, and export reports.
               </p>
 
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              <div className="hero-btns opacity-0 mt-10 flex flex-col gap-4 sm:flex-row">
                 <Link
                   href="/evaluate"
-                  className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-[#7C6FE0] px-9 text-[15px] font-black text-white shadow-[0_0_42px_rgba(124,111,224,0.5)] transition hover:bg-[#9386FF]"
+                  className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-indigo-600 px-9 text-[15px] font-black text-white shadow-[0_10px_30px_rgba(79,70,229,0.25)] transition hover:bg-indigo-500 hover:shadow-[0_12px_35px_rgba(79,70,229,0.35)] hover:translate-y-[-2px] active:scale-[0.98]"
                 >
                   Start Evaluating Free <ArrowRight size={17} />
                 </Link>
                 <Link
                   href="#workflow"
-                  className="inline-flex h-14 items-center justify-center rounded-full border border-[#2A2D3C] bg-white/[0.035] px-9 text-[15px] font-black text-white backdrop-blur transition hover:border-[#565B78] hover:bg-white/[0.07]"
+                  className="inline-flex h-14 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-9 text-[15px] font-black text-slate-700 shadow-sm backdrop-blur transition hover:border-slate-300 hover:bg-slate-50"
                 >
                   See Evaluation Flow
                 </Link>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute -inset-8 rounded-[2.5rem] bg-[#7C6FE0]/10 blur-3xl" />
-              <div className="relative overflow-hidden rounded-[1.45rem] border border-[#191B2A] bg-[#070813]/92 shadow-[0_35px_90px_rgba(0,0,0,0.62)] backdrop-blur-xl">
-                <div className="flex h-[58px] items-center justify-between border-b border-[#161827] bg-[#05060D] px-6">
+            {/* Interactive Preview Dashboard */}
+            <div className="hero-dashboard opacity-0 relative">
+              <div className="absolute -inset-6 rounded-[2.5rem] bg-indigo-500/5 blur-3xl pointer-events-none" />
+              <div className="relative overflow-hidden rounded-[1.6rem] border border-slate-200/80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.06)]">
+                {/* Windows top bar */}
+                <div className="flex h-[52px] items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6">
                   <div className="flex gap-2">
-                    <span className="h-3 w-3 rounded-full bg-[#FF5656]" />
-                    <span className="h-3 w-3 rounded-full bg-[#FACC15]" />
-                    <span className="h-3 w-3 rounded-full bg-[#22C55E]" />
+                    <span className="h-3 w-3 rounded-full bg-[#FF5656]/90" />
+                    <span className="h-3 w-3 rounded-full bg-[#FACC15]/90" />
+                    <span className="h-3 w-3 rounded-full bg-[#22C55E]/90" />
                   </div>
-                  <div className="rounded-full border border-[#453C7A] bg-[#111126] px-6 py-2 text-[11px] font-black text-[#D8D4FF]">
-                    PrepForge - Faculty 2026
+                  <div className="rounded-full border border-indigo-100 bg-indigo-50/80 px-5 py-1.5 text-[11px] font-bold text-indigo-700">
+                    PrepForge - Active Batch Console
                   </div>
                   <div className="w-[52px]" />
                 </div>
 
+                {/* Dashboard content */}
                 <div className="space-y-4 p-6">
                   {workflow.map((item) => {
                     const Icon = item.icon;
                     return (
-                      <div key={item.label} className="rounded-2xl border border-[#202235] bg-[#11111F]/88 p-4">
+                      <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 transition-all hover:bg-slate-50/80">
                         <div className="mb-4 flex items-center justify-between gap-4">
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1A1830]" style={{ color: item.color }}>
-                              <Icon size={16} />
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-sm border border-slate-100" style={{ color: item.color }}>
+                              <Icon size={15} />
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-black text-white">{item.label}</p>
-                              <p className="mt-1 text-[11px] font-mono text-[#5F6379]">{item.sub}</p>
+                              <p className="truncate text-sm font-black text-slate-800">{item.label}</p>
+                              <p className="mt-1 text-[11px] font-mono text-slate-400">{item.sub}</p>
                             </div>
                           </div>
-                          <span className="shrink-0 text-[11px] font-mono font-black text-[#8D91A8]">{item.value}</span>
+                          <span className="shrink-0 text-[11px] font-mono font-black text-slate-500">{item.value}</span>
                         </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-[#242638]">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                           <div className={`h-full rounded-full ${item.bar}`} style={{ backgroundColor: item.color }} />
                         </div>
                       </div>
                     );
                   })}
 
-                  <div className="rounded-2xl border border-[#252142] bg-[#15132A]/95 p-4">
+                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="h-3 w-3 rounded-full bg-[#22C55E] shadow-[0_0_14px_rgba(34,197,94,0.8)]" />
-                        <p className="text-sm font-black text-white">Live: OMR + Descriptive Batch</p>
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                        <p className="text-xs font-bold text-slate-700">Status: Active Evaluation Workspace Ready</p>
                       </div>
-                      <Link href="/evaluate" className="text-xs font-black text-[#B4AAFF]">
-                        Open -
+                      <Link href="/evaluate" className="text-xs font-black text-indigo-600 hover:text-indigo-500">
+                        Launch &rarr;
                       </Link>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-[#161827] bg-[#05060D] px-6 py-4 text-[10px] font-mono text-[#5E6378]">
-                  <span>PrepForge Dashboard</span>
-                  <span>Faculty Suite - <span className="text-[#22C55E]">On Track</span></span>
+                <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-4 text-[10px] font-mono text-slate-400">
+                  <span>PrepForge Engine v2.0</span>
+                  <span>System status - <span className="text-emerald-500 font-bold">Online</span></span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="evaluation" className="relative border-y border-[#151827] bg-[#05060D] px-5 py-18">
-          <div className="mx-auto grid max-w-[1180px] gap-5 lg:grid-cols-2">
+        {/* Feature Cards Section */}
+        <section id="evaluation" className="relative border-y border-slate-150/80 bg-white px-5 py-24">
+          <div className="mx-auto grid max-w-[1180px] gap-6 lg:grid-cols-2">
             {evaluationCards.map((card) => {
               const Icon = card.icon;
               return (
-                <article key={card.title} className="rounded-3xl border border-[#191B2A] bg-[#0A0B16] p-8 shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
-                  <div className="mb-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#7C6FE0]/14 text-[#9D8DFF]">
-                    <Icon size={26} />
+                <article key={card.title} className="stagger-card opacity-0 rounded-3xl border border-slate-200/70 bg-[#FCFCFE] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_18px_45px_rgba(79,70,229,0.05)] hover:border-indigo-100 hover:-translate-y-1">
+                  <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border shadow-sm ${card.color}`}>
+                    <Icon size={24} />
                   </div>
-                  <h2 className="text-2xl font-black tracking-tight text-white">{card.title}</h2>
-                  <p className="mt-4 text-base font-medium leading-8 text-[#9DA1B6]">{card.text}</p>
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">{card.badge}</span>
+                  <h2 className="mt-2 text-2.5xl font-black tracking-tight text-slate-800">{card.title}</h2>
+                  <p className="mt-4 text-base font-medium leading-8 text-slate-500">{card.text}</p>
                 </article>
               );
             })}
           </div>
         </section>
 
-        <section id="workflow" className="bg-[#03040A] px-5 py-20">
+        {/* Flow timeline */}
+        <section id="workflow" className="px-5 py-24 bg-[#FAF9FC]">
           <div className="mx-auto max-w-[1180px]">
-            <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="mb-14 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-[#8D7BFF]">How it works</p>
-                <h2 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">One faculty flow for every paper</h2>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-indigo-600">HOW IT WORKS</p>
+                <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">One console for paper checking</h2>
               </div>
-              <p className="max-w-xl text-sm font-semibold leading-7 text-[#858BA4]">
-                Upload answer sheets and model answers, generate scores and feedback,
-                then combine OMR accuracy, subject performance, and ranks into reports.
+              <p className="max-w-xl text-base font-medium leading-7 text-slate-500">
+                Simply upload images of student answer sheets and a marking key, let Gemini extract the responses, grade each step, analyze gaps, and generate downloadable reports.
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {[
-                { icon: Upload, title: "Upload", text: "Scanned sheets, images, model answers, OMR keys." },
-                { icon: Brain, title: "Evaluate", text: "Marks based on predefined criteria and answer evidence." },
-                { icon: BarChart3, title: "Analyze", text: "Topic gaps, learning patterns, accuracy, rank analysis." },
-                { icon: FileBadge, title: "Report", text: "PDF-ready student and class report summaries." },
-              ].map((item) => {
+                { icon: Upload, title: "1. Upload", text: "Scanned answer sheets, OMR forms, keys, or custom rubrics." },
+                { icon: Brain, title: "2. Grade", text: "Evaluate responses based on strict grading criteria with exact quotes." },
+                { icon: BarChart3, title: "3. Analyze", text: "Map topic-wise concept gaps, accuracies, and ranks." },
+                { icon: FileBadge, title: "4. Report", text: "Download beautiful HTML/PDF reports customized for parents." },
+              ].map((item, idx) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.title} className="rounded-3xl border border-[#191B2A] bg-[#0A0B16] p-6 transition hover:border-[#7564E8]/45">
-                    <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-[#171329] text-[#9D8DFF]">
-                      <Icon size={21} />
+                  <div key={item.title} className="rounded-3xl border border-slate-200 bg-white p-6 transition-all duration-300 hover:shadow-lg hover:border-indigo-100">
+                    <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100/50 text-indigo-600">
+                      <Icon size={19} />
                     </div>
-                    <h3 className="text-lg font-black text-white">{item.title}</h3>
-                    <p className="mt-3 text-sm font-medium leading-6 text-[#8A8FA6]">{item.text}</p>
+                    <h3 className="text-lg font-black text-slate-800">{item.title}</h3>
+                    <p className="mt-3 text-sm font-medium leading-6 text-slate-500">{item.text}</p>
                   </div>
                 );
               })}
@@ -202,37 +260,39 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="reports" className="px-5 pb-20">
-          <div className="mx-auto grid max-w-[1180px] gap-5 lg:grid-cols-[.9fr_1.1fr]">
-            <div className="rounded-3xl border border-[#191B2A] bg-[#0A0B16] p-8">
-              <ShieldCheck className="mb-6 text-[#9D8DFF]" size={34} />
-              <h2 className="text-3xl font-black tracking-tight text-white">College-ready demo, no database needed.</h2>
-              <p className="mt-4 text-base font-medium leading-8 text-[#9DA1B6]">
-                Static data keeps the demo fast for investors and colleges. An automatic local filesystem
-                fallback saves evaluation history directly in the workspace, while Gemini handles grounded marks and feedback when env keys are present.
-              </p>
+        {/* Demo/College-ready block */}
+        <section id="reports" className="px-5 pb-24 bg-[#FAF9FC]">
+          <div className="mx-auto grid max-w-[1180px] gap-6 lg:grid-cols-[.95fr_1.05fr]">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 flex flex-col justify-between">
+              <div>
+                <ShieldCheck className="mb-6 text-indigo-600" size={32} />
+                <h2 className="text-3xl font-black tracking-tight text-slate-800">Production-ready suite with file fallback</h2>
+                <p className="mt-4 text-base font-medium leading-8 text-slate-500">
+                  PrepForge handles evaluation records seamlessly. When a database is not configured, it records local evaluation logs to the filesystem (`local_history.json`), keeping the workspace clean and fast for demos.
+                </p>
+              </div>
               <Link
                 href="/evaluate"
-                className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#7C6FE0] px-7 text-sm font-black text-white shadow-[0_0_34px_rgba(124,111,224,0.36)]"
+                className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-indigo-600 px-7 text-sm font-black text-white shadow-[0_4px_15px_rgba(79,70,229,0.2)] hover:bg-indigo-500 w-fit"
               >
-                Open Faculty Console <ArrowRight size={16} />
+                Launch Console <ArrowRight size={16} />
               </Link>
             </div>
 
-            <div className="rounded-3xl border border-[#191B2A] bg-[#0A0B16] p-6">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.24em] text-[#8D7BFF]">Student Report</p>
-                  <h3 className="mt-1 text-xl font-black text-white">Aarav Sharma - JEE Batch</h3>
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-indigo-600">Automated Report Preview</p>
+                  <h3 className="mt-1.5 text-xl font-black text-slate-800">Aarav Sharma — JEE Batch</h3>
                 </div>
-                <BadgeCheck className="text-[#22C55E]" size={25} />
+                <BadgeCheck className="text-emerald-500" size={24} />
               </div>
 
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
                 {reportStats.map(([label, value]) => (
-                  <div key={label} className="rounded-2xl border border-[#202235] bg-[#11111F] p-4">
-                    <p className="text-xl font-black text-white">{value}</p>
-                    <p className="mt-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#686D83]">{label}</p>
+                  <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                    <p className="text-xl font-black text-slate-800">{value}</p>
+                    <p className="mt-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
                   </div>
                 ))}
               </div>
@@ -240,13 +300,13 @@ export default function LandingPage() {
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 {[
                   ["Strengths", "Mechanics, Calculus, Electrochemistry"],
-                  ["Weaknesses", "Ray optics, organic substitution"],
-                  ["Suggestions", "Practice derivations and NCERT-based MCQs"],
-                  ["Learning Pattern", "Concept clear, step marking needs improvement"],
+                  ["Weaknesses", "Ray optics sign conventions"],
+                  ["Suggestions", "Practice derivation steps and sign rules"],
+                  ["Learning Pattern", "High numerical confidence, missing units"],
                 ].map(([label, text]) => (
-                  <div key={label} className="rounded-2xl border border-[#202235] bg-[#11111F] p-4">
-                    <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#8D7BFF]">{label}</p>
-                    <p className="text-sm font-semibold leading-6 text-[#B3B7C8]">{text}</p>
+                  <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50/30 p-4">
+                    <p className="mb-1.5 text-xs font-black uppercase tracking-[0.18em] text-indigo-600">{label}</p>
+                    <p className="text-sm font-semibold leading-6 text-slate-600">{text}</p>
                   </div>
                 ))}
               </div>
@@ -254,6 +314,6 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-    </>
+    </div>
   );
 }

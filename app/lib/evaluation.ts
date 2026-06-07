@@ -41,6 +41,7 @@ export type StepGrade = {
   status: "earned" | "partial" | "review";
   note: string;
   citations: Citation[];
+  reasoning?: string;
 };
 
 export type OmrItem = {
@@ -159,7 +160,7 @@ export const students: Student[] = [
     omr: ["C", "B", "C", "A", "D", "A", "B", "D", "A", "C"],
   },
   {
-    name: "Kabir Khan",
+    name: "Rohan Mehta",
     roll: "JEE-2026-033",
     stream: "JEE",
     subject: "Physics + Chemistry",
