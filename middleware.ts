@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/report(.*)",
+  // Handwriting Fairness System — protected (requires login)
+  // "/handwriting-fairness(.*)",  ← uncomment to make public for demo
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
