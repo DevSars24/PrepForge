@@ -421,6 +421,14 @@ export default function EvaluatePage() {
                   <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 650 }}>Descriptive</p>
                   <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{result.score}/100</p>
                 </div>
+                {result.handwritingConfidence !== undefined && (
+                  <div style={{ background: "var(--bg-surface)", padding: "8px 14px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "90px" }}>
+                    <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 650 }}>Handwriting</p>
+                    <p style={{ fontSize: "1.1rem", fontWeight: 800, color: result.handwritingConfidence >= 80 ? "#22c55e" : result.handwritingConfidence >= 50 ? "#eab308" : "#ef4444", marginTop: 1 }}>
+                      {result.handwritingConfidence}%
+                    </p>
+                  </div>
+                )}
                 <div style={{ background: "var(--bg-surface)", padding: "8px 14px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "90px" }}>
                   <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 650 }}>OMR score</p>
                   <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{omrResult.score}/{omrResult.total}</p>
@@ -749,6 +757,67 @@ export default function EvaluatePage() {
               {/* Tab 3: AI Insights & Step marks */}
               {workspace === "insights" && (
                 <div className="space-y-4">
+                  {result.handwritingConfidence !== undefined && (
+                    <div className="result-card" style={{ borderLeft: `4px solid ${result.handwritingConfidence >= 80 ? "var(--success)" : result.handwritingConfidence >= 50 ? "var(--warning)" : "var(--error)"}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+                        <div>
+                          <h3 style={{ display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+                            <ShieldCheck size={20} style={{ color: result.handwritingConfidence >= 80 ? "#22c55e" : result.handwritingConfidence >= 50 ? "#eab308" : "#ef4444" }} />
+                            Handwriting Fairness & OCR Confidence Audit
+                          </h3>
+                          <p className="text-sm text-slate-500 mt-2 mb-0">
+                            OCR confidence score: <strong>{result.handwritingConfidence}%</strong>. 
+                            {result.handwritingNeedsReview 
+                              ? " Critical low-confidence zones detected in student handwriting. Human review is recommended." 
+                              : " Handwriting clarity satisfies the quality threshold. Auto-grading proceeded without flags."}
+                          </p>
+                        </div>
+                        <Link 
+                          href="/handwriting-fairness" 
+                          className="btn-secondary" 
+                          style={{ padding: "8px 16px", textDecoration: "none", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: 6 }}
+                        >
+                          Open Fairness Dashboard →
+                        </Link>
+                      </div>
+                      
+                      {result.handwritingDetails && result.handwritingDetails.length > 0 && (
+                        <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+                          {result.handwritingDetails.map((page) => (
+                            <div 
+                              key={page.pageIndex} 
+                              style={{ 
+                                background: "var(--bg-surface)", 
+                                border: "1px solid var(--border)", 
+                                borderRadius: "var(--radius-md)", 
+                                padding: "12px 14px" 
+                              }}
+                            >
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>Page {page.pageIndex + 1}</span>
+                                <span 
+                                  style={{ 
+                                    fontSize: "0.75rem", 
+                                    fontWeight: 700, 
+                                    color: page.pageConfidence >= 80 ? "#22c55e" : page.pageConfidence >= 50 ? "#eab308" : "#ef4444" 
+                                  }}
+                                >
+                                  {page.pageConfidence}%
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: 6, display: "flex", flexDirection: "column", gap: 2 }}>
+                                <span>Flagged words: {page.flaggedWordCount} ({page.redWordCount} critical)</span>
+                                <span style={{ textTransform: "capitalize", fontWeight: 600, color: "var(--text-tertiary)", marginTop: 2 }}>
+                                  Action: {page.recommendation.replace(/_/g, " ")}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Stepwise evaluation results */}
                   <div className="result-card">
                     <h3>Step-wise Grades and Chain-of-Thought Reasoning</h3>
@@ -848,6 +917,13 @@ export default function EvaluatePage() {
                               <p className="history-detail" style={{ textTransform: "uppercase", fontSize: "0.68rem", fontWeight: 700, color: "var(--accent)" }}>
                                 {item.type}
                               </p>
+                              {item.resultJson && typeof item.resultJson === "object" && "handwritingConfidence" in item.resultJson && (
+                                <p style={{ fontSize: "0.65rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                                  HW: <strong style={{ color: (item.resultJson.handwritingConfidence as number) >= 80 ? "#22c55e" : (item.resultJson.handwritingConfidence as number) >= 50 ? "#eab308" : "#ef4444" }}>
+                                    {item.resultJson.handwritingConfidence as number}%
+                                  </strong>
+                                </p>
+                              )}
                             </div>
                             <div style={{ display: "flex", gap: 6 }}>
                               <button
@@ -1219,6 +1295,13 @@ function ReportPreview({
           <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4 }}>
             OMR: {omr.score}/{omr.total}
           </p>
+          {result.handwritingConfidence !== undefined && (
+            <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2 }}>
+              Handwriting: <strong style={{ color: result.handwritingConfidence >= 80 ? "#22c55e" : result.handwritingConfidence >= 50 ? "#eab308" : "#ef4444" }}>
+                {result.handwritingConfidence}%
+              </strong>
+            </p>
+          )}
         </div>
       </div>
       
@@ -1299,5 +1382,5 @@ function formatClientError(prefix: string, error: unknown) {
 
 // Dynamic report HTML builder
 function buildReportHtml(student: Student, result: EvaluationResult, omr: CustomOmrResult) {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${student.roll} PrepForge Report</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#0f172a}.score{float:right;background:#6366f1;color:white;padding:16px 20px;border-radius:12px}.card{border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:14px 0}.badge{display:inline-block;margin:4px;padding:5px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:12px}</style></head><body><div class="score"><b>${result.score}/100</b><br>OMR ${omr.score}/${omr.total}</div><h1>PrepForge Report</h1><p>Student: ${student.name} | Roll: ${student.roll} | Stream: ${student.stream} ${student.batch ? `| Batch: ${student.batch}` : ""}</p><div class="card"><b>Summary</b><p>${result.summary}</p></div><div class="card"><b>Step Marks</b>${result.stepGrades.map((grade) => `<p>${grade.topic}: ${grade.awarded}/${grade.max} - ${grade.note}</p>${grade.citations.map((citation) => `<span class="badge">${citation.source}, line ${citation.line}</span>`).join("")}`).join("")}</div><div class="card"><b>OMR</b><p>Correct: ${omr.correct}, Wrong: ${omr.wrong}, Blank: ${omr.blank}, Accuracy: ${omr.accuracy}%</p></div><div class="card"><b>Improvement Plan</b>${result.recommendations.map((item) => `<p>${item}</p>`).join("")}</div></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${student.roll} PrepForge Report</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#0f172a}.score{float:right;background:#6366f1;color:white;padding:16px 20px;border-radius:12px}.card{border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:14px 0}.badge{display:inline-block;margin:4px;padding:5px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:12px}</style></head><body><div class="score"><b>${result.score}/100</b><br>OMR ${omr.score}/${omr.total}${result.handwritingConfidence !== undefined ? `<br>Handwriting: ${result.handwritingConfidence}%` : ""}</div><h1>PrepForge Report</h1><p>Student: ${student.name} | Roll: ${student.roll} | Stream: ${student.stream} ${student.batch ? `| Batch: ${student.batch}` : ""}</p><div class="card"><b>Summary</b><p>${result.summary}</p></div><div class="card"><b>Step Marks</b>${result.stepGrades.map((grade) => `<p>${grade.topic}: ${grade.awarded}/${grade.max} - ${grade.note}</p>${grade.citations.map((citation) => `<span class="badge">${citation.source}, line ${citation.line}</span>`).join("")}`).join("")}</div><div class="card"><b>OMR</b><p>Correct: ${omr.correct}, Wrong: ${omr.wrong}, Blank: ${omr.blank}, Accuracy: ${omr.accuracy}%</p></div><div class="card"><b>Improvement Plan</b>${result.recommendations.map((item) => `<p>${item}</p>`).join("")}</div></body></html>`;
 }

@@ -6,6 +6,7 @@ import { generateAnalysis } from "@/lib/hfAnalysis";
 import { evaluateLocally, type Student } from "@/lib/evaluation";
 import { uploadEvaluationFile } from "@/lib/supabase";
 import { logDebugError, normalizeError } from "@/lib/debug";
+import { scoreConfidence } from "../../../features/handwriting-fairness/ConfidenceScorer";
 
 function buildDefaultStudent(): Student {
   return {
@@ -93,11 +94,60 @@ export async function POST(req: Request) {
       });
     }
 
+    let handwritingConfidence: number | undefined;
+    let handwritingNeedsReview = false;
+    let handwritingDetails: any[] = [];
+
     if (validFiles.length) {
-      const images = await Promise.all(validFiles.map((file) => fileToBase64(file).then((data) => ({ ...data, name: file.name }))));
-      const ocrText = await ocrAnswerSheets(images);
+      const confidencePromises = validFiles.map(async (file) => {
+        try {
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const confResult = await scoreConfidence(buffer);
+          return {
+            success: true,
+            text: confResult.fullText,
+            confResult,
+          };
+        } catch (err) {
+          console.warn(`[PrepForge] scoreConfidence failed for ${file.name}, using fallback OCR:`, err);
+          try {
+            const base64Data = await fileToBase64(file);
+            const fallbackText = await ocrAnswerSheets([{ ...base64Data, name: file.name }]);
+            return {
+              success: false,
+              text: fallbackText,
+            };
+          } catch (fallbackErr) {
+            console.error(`[PrepForge] Fallback OCR also failed for ${file.name}:`, fallbackErr);
+            return {
+              success: false,
+              text: "",
+            };
+          }
+        }
+      });
+
+      const confResults = await Promise.all(confidencePromises);
+      const ocrText = confResults.map((r) => r.text).filter(Boolean).join("\n\n");
       answerText = [ocrText, answerText].filter(Boolean).join("\n\n");
       ocrUsed = true;
+
+      const validRuns = confResults.filter((r) => r.success && r.confResult) as { success: true; text: string; confResult: any }[];
+      if (validRuns.length > 0) {
+        const avgConfidence = Math.round(
+          validRuns.reduce((sum, r) => sum + r.confResult.pageConfidence, 0) / validRuns.length
+        );
+        handwritingConfidence = avgConfidence;
+        handwritingNeedsReview = validRuns.some((r) => r.confResult.needsReview);
+        handwritingDetails = validRuns.map((r, idx) => ({
+          pageIndex: idx,
+          pageConfidence: r.confResult.pageConfidence,
+          needsReview: r.confResult.needsReview,
+          flaggedWordCount: r.confResult.flaggedWordCount,
+          redWordCount: r.confResult.redWordCount,
+          recommendation: r.confResult.recommendation,
+        }));
+      }
     }
 
     if (validCriteriaFiles.length) {
@@ -124,6 +174,12 @@ export async function POST(req: Request) {
       retrievalStage,
       ocrUsed,
     });
+
+    if (handwritingConfidence !== undefined) {
+      result.handwritingConfidence = handwritingConfidence;
+      result.handwritingNeedsReview = handwritingNeedsReview;
+      result.handwritingDetails = handwritingDetails;
+    }
 
     // Generate HF strengths/gaps analysis (non-blocking — if it fails, we skip it)
     let hfAnalysis: string | undefined;
