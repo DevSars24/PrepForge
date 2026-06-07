@@ -152,10 +152,4 @@ On Windows, you can also run:
 
 ## 📄 License
 This project is proprietary. All rights reserved.
-
-
-## 📄 License
-
-This project is proprietary. All rights reserved.
-
 ---
