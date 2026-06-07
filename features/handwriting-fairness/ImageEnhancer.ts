@@ -18,7 +18,7 @@
  * ─────────────────────────────────────────────────────────────────────
  */
 
-import Jimp from "jimp";
+import { Jimp } from "jimp";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -70,9 +70,9 @@ export async function getClarityScore(imageBuffer: Buffer): Promise<number> {
     const grey = img.clone().greyscale();
 
     let edgePixels = 0;
-    const totalPixels = grey.getWidth() * grey.getHeight();
+    const totalPixels = grey.width * grey.height;
 
-    grey.scan(0, 0, grey.getWidth() - 1, grey.getHeight(), (x, y, idx) => {
+    grey.scan(0, 0, grey.width - 1, grey.height, (x: number, y: number, idx: number) => {
       // idx is the flat index into the RGBA pixel buffer
       const currentVal = grey.bitmap.data[idx]; // R channel (greyscale → R=G=B)
       // Compare with the pixel immediately to the right
@@ -107,12 +107,12 @@ export async function getClarityScore(imageBuffer: Buffer): Promise<number> {
  * (all four neighbours agree), replace it with the neighbour average.
  * This removes single-pixel specks without blurring strokes.
  */
-function applyNoiseRemoval(img: Jimp): Jimp {
-  const w = img.getWidth();
-  const h = img.getHeight();
+function applyNoiseRemoval(img: any): any {
+  const w = img.width;
+  const h = img.height;
   const clone = img.clone();
 
-  img.scan(1, 1, w - 2, h - 2, (x, y, idx) => {
+  img.scan(1, 1, w - 2, h - 2, (x: number, y: number, idx: number) => {
     const center = img.bitmap.data[idx];
 
     // Read the four cardinal neighbours from the RGBA buffer
@@ -185,7 +185,7 @@ export async function enhanceImage(
   // ── Step D: Noise Removal ───────────────────────────────────────────────
   // Removes isolated ink specks and scanner artifacts without blurring
   // actual handwritten strokes.
-  let processed: Jimp = img;
+  let processed: any = img;
   if (removeNoise) {
     processed = applyNoiseRemoval(img);
   }
@@ -194,10 +194,10 @@ export async function enhanceImage(
   // Enlarge 1.5× so that small handwriting produces glyphs that are big
   // enough for the OCR model to reliably recognize letterforms.
   // Jimp.AUTO keeps the aspect ratio locked on the height axis.
-  processed.resize(processed.getWidth() * scaleFactor, Jimp.AUTO);
+  processed.resize(processed.width * scaleFactor, -1);
 
   // Return as PNG (lossless, preserves the sharp black/white boundary)
-  return processed.getBufferAsync(Jimp.MIME_PNG);
+  return Buffer.from(await processed.getBuffer("image/png"));
 }
 
 /**

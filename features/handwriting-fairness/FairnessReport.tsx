@@ -70,7 +70,7 @@ function clarityLabel(score: number): { label: string; color: string } {
   return { label: "Poor", color: "text-red-400" };
 }
 
-function routeBadge(route: StudentFairnessRecord["route"]): JSX.Element {
+function routeBadge(route: StudentFairnessRecord["route"]) {
   const map = {
     auto_graded: {
       label: "Auto Graded",
@@ -291,7 +291,7 @@ async function generateFairnessPdf(data: FairnessReportData): Promise<void> {
 
   // ── Trigger browser download ──────────────────────────────────────────
   const pdfBytes = await doc.save();
-  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

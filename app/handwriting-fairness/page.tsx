@@ -1,4 +1,4 @@
-import HandwritingDashboard from "@/features/handwriting-fairness/HandwritingDashboard";
+import HandwritingDashboard from "../../features/handwriting-fairness/HandwritingDashboard";
 
 export const metadata = {
   title: "Handwriting Fairness System — PrepForge",

@@ -109,7 +109,7 @@ async function runOcr(imageBuffer: Buffer, label: string): Promise<OcrResult> {
     // We call the internal Next.js API route so we don't duplicate
     // OCR provider logic here — DRY principle.
     const formData = new FormData();
-    const blob = new Blob([imageBuffer], { type: mimeType });
+    const blob = new Blob([imageBuffer as any], { type: mimeType });
     formData.append("files", blob, `ocr-input-${label}.png`);
     formData.append("mode", "answer");
 
