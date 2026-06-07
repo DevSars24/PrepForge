@@ -4,14 +4,6 @@ An automated grading platform designed specifically for JEE & NEET descriptive e
 
 ---
 
-## 🎯 The Big Picture (Founder Pitch)
-
-Manually checking descriptive papers (JEE/NEET), applying correct marking rubrics, and scanning OMR sheets for anomalies is an extremely time-consuming and inconsistent process for faculty. PrepForge makes this entire workflow **90% faster** and fully digital. 
-
-The platform transcribes handwritten answers & PDFs, matches them semantically against institutional rubrics, grades them with structured evaluations and evidence citations using the best model capabilities from Gemini, generates NCERT-aligned gap analyses, and builds downloadable offline reports.
-
----
-
 ## 🏗️ System Architecture & Workflow
 
 Here is how PrepForge processes an evaluation request:
