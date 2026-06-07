@@ -1,4 +1,4 @@
-import { geminiGenerateJson, imagePart } from "@/lib/gemini";
+import { geminiGenerateJson, geminiGenerateText, imagePart } from "@/lib/gemini";
 import { mistralOCR, hasMistralKey } from "@/lib/mistralOCR";
 import { getTopRubricChunks, hasHfToken } from "@/lib/hfEmbeddings";
 import { generateAnalysis } from "@/lib/hfAnalysis";
@@ -16,6 +16,7 @@ type AiStepGrade = {
   max: number;
   confidence: number;
   status: "earned" | "partial" | "review";
+  reasoning: string;
   note: string;
   evidenceQuote: string;
   citationSource: string;
@@ -39,11 +40,11 @@ type OmrVisionPayload = {
 
 const aiGradingSchema: Schema = {
   type: SchemaType.OBJECT,
-  description: "Detailed evaluation of student performance based on JEE/NEET marking rubric.",
+  description: "Chain-of-thought evaluation of student performance with rubric-based grading.",
   properties: {
     stepGrades: {
       type: SchemaType.ARRAY,
-      description: "Breakdown of scores for each rubric point.",
+      description: "Breakdown of scores for each rubric point, with reasoning.",
       items: {
         type: SchemaType.OBJECT,
         properties: {
@@ -59,7 +60,11 @@ const aiGradingSchema: Schema = {
             enum: ["earned", "partial", "review"],
             description: "earned (full marks), partial (partial credit), or review (requires faculty review)."
           },
-          note: { type: SchemaType.STRING, description: "Justification for the awarded score." },
+          reasoning: {
+            type: SchemaType.STRING,
+            description: "Step-by-step chain-of-thought analysis: what the student wrote, what was expected, where they matched or diverged, and why the score was assigned."
+          },
+          note: { type: SchemaType.STRING, description: "Concise justification for the awarded score." },
           evidenceQuote: { type: SchemaType.STRING, description: "Exact quote/sentence from student's answer sheet that proves this step." },
           citationSource: { type: SchemaType.STRING, description: "Source reference from the rubric." },
         },
@@ -71,6 +76,7 @@ const aiGradingSchema: Schema = {
           "max",
           "confidence",
           "status",
+          "reasoning",
           "note",
           "evidenceQuote",
           "citationSource"
@@ -139,6 +145,10 @@ const omrVisionSchema: Schema = {
   required: ["answers", "anomalies", "notes"],
 };
 
+// ---------------------------------------------------------------------------
+// Rubric Retrieval (RAG)
+// ---------------------------------------------------------------------------
+
 function chunkRubric(text: string, size = 1200): string[] {
   return text
     .split(/\n{2,}/)
@@ -171,25 +181,52 @@ async function retrieveRubricContext(answerText: string, rubricText: string): Pr
   return chunks.slice(0, 6).join("\n\n---\n\n");
 }
 
+// ---------------------------------------------------------------------------
+// OCR — multi-provider with Gemini Vision fallback
+// ---------------------------------------------------------------------------
+
 export async function ocrAnswerSheets(images: ImageInput[]): Promise<string> {
   if (!images.length) return "";
 
   // Use Mistral OCR if available (preferred — better for handwriting + PDFs)
   if (hasMistralKey()) {
-    const results = await Promise.all(
-      images.map((img) => mistralOCR(img.base64, img.mimeType))
-    );
-    return results.filter(Boolean).join("\n\n");
+    try {
+      const results = await Promise.all(
+        images.map((img) => mistralOCR(img.base64, img.mimeType))
+      );
+      const text = results.filter(Boolean).join("\n\n");
+      if (text.trim()) return text;
+    } catch (err) {
+      console.warn("[PrepForge] Mistral OCR failed, falling back to Gemini Vision:", err);
+    }
   }
 
-  // Fallback: return empty (caller should handle gracefully)
+  // Fallback: Gemini Vision OCR
+  try {
+    const parts = images.map((img) => imagePart(img.base64, img.mimeType));
+    const prompt = `You are an expert OCR system for handwritten academic answer sheets.
+Carefully read every word, formula, equation, diagram label, and number on each page.
+Output the text exactly as written by the student, preserving line breaks and structure.
+If any part is illegible, write [illegible] in place.
+Do NOT paraphrase or interpret — transcribe faithfully.`;
+
+    const text = await geminiGenerateText(prompt, parts);
+    if (text.trim()) return text;
+  } catch (err) {
+    console.warn("[PrepForge] Gemini Vision OCR also failed:", err);
+  }
+
   throw new PrepForgeError({
     kind: "gemini_error",
     component: "ocrAnswerSheets",
-    message: "No OCR provider available. Set MISTRAL_API_KEY in .env for Mistral OCR.",
+    message: "No OCR provider available or all providers failed. Set MISTRAL_API_KEY or GEMINI_API_KEY in .env.",
     statusCode: 503,
   });
 }
+
+// ---------------------------------------------------------------------------
+// OMR Vision
+// ---------------------------------------------------------------------------
 
 export async function ocrOmrSheet(images: ImageInput[]): Promise<OmrVisionPayload> {
   if (!images.length) {
@@ -197,11 +234,17 @@ export async function ocrOmrSheet(images: ImageInput[]): Promise<OmrVisionPayloa
   }
 
   const parts = images.map((img) => imagePart(img.base64, img.mimeType));
-  const prompt = `
-You are an OMR reader for JEE/NEET multiple-choice sheets.
-Read filled bubbles for each question in order.
+  const prompt = `You are an OMR reader for JEE/NEET multiple-choice sheets.
 
-Return JSON:
+TASK: Read every filled bubble on each question row, from Q1 to the last visible question.
+
+INSTRUCTIONS:
+1. Examine each row carefully — look for the darkest filled circle.
+2. If a bubble is lightly shaded, consider it selected ONLY if it is clearly darker than the surrounding empty bubbles.
+3. For double-filled rows, mark "?" and add to anomalies.
+4. For blank/unmarked rows, mark "-".
+
+OUTPUT FORMAT (JSON):
 {
   "answers": ["A","B","C","D", ...],
   "anomalies": ["Q3 double bubble", "Q7 faint mark"],
@@ -212,8 +255,7 @@ Rules:
 - Use A, B, C, D for selected options
 - Use "-" for blank/unmarked
 - Use "?" for ambiguous/double bubbles
-- One entry per question, in order starting Q1
-`.trim();
+- One entry per question, in order starting Q1`.trim();
 
   const payload = await geminiGenerateJson<OmrVisionPayload>(prompt, parts, omrVisionSchema);
   if (!Array.isArray(payload.answers) || !Array.isArray(payload.anomalies) || typeof payload.notes !== "string") {
@@ -227,6 +269,10 @@ Rules:
   return payload;
 }
 
+// ---------------------------------------------------------------------------
+// Chain-of-Thought Grading
+// ---------------------------------------------------------------------------
+
 export async function gradeWithGemini(params: {
   student: Student;
   answerText: string;
@@ -236,13 +282,21 @@ export async function gradeWithGemini(params: {
   const rubricContext = await retrieveRubricContext(params.answerText, params.rubricText);
   const retrievalStage = params.rubricText.length > 6000 ? "EMBED_RAG" : "FULL_RUBRIC";
 
-  const prompt = `
-You are PrepForge Faculty Evaluation AI for ${params.stream} (JEE/NEET).
-Grade the student answer ONLY using the marking rubric below.
-Do not use outside knowledge to invent marks.
+  const studentMeta = [
+    `Name: ${params.student.name}`,
+    `Roll: ${params.student.roll}`,
+    `Subject: ${params.student.subject}`,
+    params.student.batch ? `Batch: ${params.student.batch}` : null,
+    params.student.examType ? `Exam: ${params.student.examType}` : null,
+    params.student.section ? `Section: ${params.student.section}` : null,
+  ].filter(Boolean).join(" | ");
 
-Student: ${params.student.name} (${params.student.roll})
-Subject focus: ${params.student.subject}
+  const prompt = `You are PrepForge Faculty Evaluation AI for ${params.stream} (JEE/NEET).
+
+YOUR ROLE: Grade a student's answer sheet using ONLY the marking rubric provided.
+You MUST use Chain-of-Thought (CoT) reasoning for every rubric point.
+
+STUDENT: ${studentMeta}
 
 MARKING RUBRIC:
 ${rubricContext}
@@ -250,21 +304,32 @@ ${rubricContext}
 STUDENT ANSWER:
 ${params.answerText}
 
-Return JSON matching the schema parameters:
-- "stepGrades": Array of evaluations per rubric point
-- "strengths": Topics where student performed well
-- "weaknesses": Topics with missing/incorrect details
-- "topicGaps": syllabus subtopics with concept gaps
-- "recommendations": targeted study steps
-- "summary": brief faculty description
-- "overallConfidence": float confidence 0.0 to 1.0
+GRADING INSTRUCTIONS:
+For EACH rubric point, follow this reasoning chain:
+1. IDENTIFY: What does the rubric expect? What topic, formula, or concept must appear?
+2. SEARCH: Scan the student's answer for evidence of this specific requirement.
+3. COMPARE: How closely does the student's evidence match the rubric expectation?
+   - Check formula correctness (sign conventions, variable names, units)
+   - Check method completeness (did they show intermediate steps?)
+   - Check numerical accuracy (are substitutions and arithmetic correct?)
+4. DECIDE: Award marks based on the evidence quality:
+   - "earned": Full match — rubric requirement is clearly met with correct evidence
+   - "partial": Partial match — method or concept is right but execution has errors
+   - "review": Weak or no evidence — requires faculty review
+5. QUOTE: Extract the EXACT sentence(s) from the student's answer as evidenceQuote
 
-Rules:
-- Award partial credit for correct method even if final answer is wrong
-- If evidence is weak, set status to "review" and awarded to 0 or partial
-- Every awarded mark must have evidenceQuote from the student answer
-- recommendations must target topicGaps
-`.trim();
+Write your full reasoning in the "reasoning" field BEFORE deciding the score.
+
+SCORING RULES:
+- Award partial credit for correct method even if the final answer is wrong.
+- If evidence is weak, set status to "review" and awarded to 0 or partial.
+- Every awarded mark MUST have an evidenceQuote from the student answer.
+- If no evidence exists for a rubric point, set awarded=0, status="review".
+- recommendations must directly target identified topicGaps.
+- strengths should list topics where the student demonstrated mastery.
+- weaknesses should list specific missing steps or errors.
+
+Return JSON matching the response schema.`.trim();
 
   const grading = await geminiGenerateJson<AiGradingPayload>(prompt, [], aiGradingSchema);
   if (!Array.isArray(grading.stepGrades) || typeof grading.summary !== "string") {
@@ -277,6 +342,10 @@ Rules:
   }
   return { grading, rubricContext, retrievalStage };
 }
+
+// ---------------------------------------------------------------------------
+// Map AI grading → EvaluationResult
+// ---------------------------------------------------------------------------
 
 export function mapAiGradingToResult(
   grading: AiGradingPayload,
@@ -292,6 +361,7 @@ export function mapAiGradingToResult(
     confidence: clamp(grade.confidence ?? 0.7, 0, 1),
     status: grade.status || "review",
     note: grade.note || "",
+    reasoning: grade.reasoning || "",
     citations: grade.evidenceQuote
       ? [
           {
@@ -322,9 +392,9 @@ export function mapAiGradingToResult(
       ? grading.recommendations
       : ["Review NCERT basics for flagged topics."],
     retrievalTrace: [
-      { stage: "INGEST", detail: meta.ocrUsed ? "Answer sheet processed with Gemini Vision OCR." : "Typed answer text used." },
-      { stage: "RAG", detail: meta.retrievalStage === "EMBED_RAG" ? "Rubric chunks retrieved with Gemini embeddings." : "Full rubric passed to grader." },
-      { stage: "GRADE", detail: "Gemini structured JSON grading with evidence quotes." },
+      { stage: "INGEST", detail: meta.ocrUsed ? "Answer sheet processed with multi-provider OCR (Mistral → Gemini Vision)." : "Typed answer text used." },
+      { stage: "RAG", detail: meta.retrievalStage === "EMBED_RAG" ? "Rubric chunks retrieved with semantic embeddings." : "Full rubric passed to grader." },
+      { stage: "COT_GRADE", detail: "Chain-of-Thought grading: model reasons step-by-step before scoring each rubric point." },
       { stage: "GUARDRAIL", detail: "Marks clamped to rubric max; weak evidence flagged for review." },
     ],
     summary: grading.summary || `${student.name} evaluation complete.`,

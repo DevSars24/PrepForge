@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -18,13 +19,14 @@ import {
   Sparkles,
   Upload,
   X,
-  type LucideIcon,
+  Trash2,
+  RefreshCw,
+  UserCheck,
 } from "lucide-react";
 import {
   answerKey,
   evaluateCustomOmr,
   evaluateLocally,
-  rankStudents,
   students,
   type CustomOmrResult,
   type EvaluationResult,
@@ -33,6 +35,8 @@ import {
   type UploadedFile,
 } from "@/lib/evaluation";
 import type { DebugError } from "@/lib/debug";
+import Navbar from "@/components/Navbar";
+import gsap from "gsap";
 
 type Workspace = "descriptive" | "omr" | "insights" | "report" | "history";
 type ApiPayload<T> = T & { warning?: string; error?: string; debug?: DebugError };
@@ -54,28 +58,62 @@ const criteriaText = `Step marking criteria:
 4. Attach every mark to a source citation and answer-line evidence.`;
 
 export default function EvaluatePage() {
+  const { user } = useUser();
   const [workspace, setWorkspace] = useState<Workspace>("descriptive");
+
+  // Dynamic Student details states
+  const [studentName, setStudentName] = useState("Aarav Sharma");
+  const [rollNumber, setRollNumber] = useState("JEE-2026-014");
+  const [batch, setBatch] = useState("Super-30");
+  const [section, setSection] = useState("A");
+  const [subject, setSubject] = useState("Physics + Maths");
   const [stream, setStream] = useState<Stream>("JEE");
-  const [selectedRoll, setSelectedRoll] = useState(students.find((student) => student.stream === "JEE")?.roll || students[0].roll);
-  const selectedStudent = students.find((student) => student.roll === selectedRoll) || students[0];
-  const [answerText, setAnswerText] = useState(selectedStudent.answerText);
+  const [examType, setExamType] = useState("Mains Mock");
+
+  // Input fields for evaluations
+  const [answerText, setAnswerText] = useState(
+    "Line 1: Used lens formula and sign convention for ray optics.\nLine 2: Substituted focal length and image distance, but one negative sign is missed.\nLine 3: Differentiated the function before simplifying the final value.\nLine 4: Wrote conservation of energy with units."
+  );
   const [markingCriteria, setMarkingCriteria] = useState(criteriaText);
+  const [omrKeyText, setOmrKeyText] = useState(answerKey.join(" "));
+  const [omrResponseText, setOmrResponseText] = useState("A B C D B A C D A B");
+
+  // File uploads
   const [answerFiles, setAnswerFiles] = useState<UploadedFile[]>([]);
   const [criteriaFiles, setCriteriaFiles] = useState<UploadedFile[]>([]);
   const [omrFiles, setOmrFiles] = useState<UploadedFile[]>([]);
   const [answerFileRefs, setAnswerFileRefs] = useState<File[]>([]);
   const [criteriaFileRefs, setCriteriaFileRefs] = useState<File[]>([]);
   const [omrFileRefs, setOmrFileRefs] = useState<File[]>([]);
-  const [statusNote, setStatusNote] = useState<string | null>(null);
-  const [omrKeyText, setOmrKeyText] = useState(answerKey.join(" "));
-  const [omrResponseText, setOmrResponseText] = useState(selectedStudent.omr.join(" "));
+
+  // Results & UI status
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<EvaluationResult>(() => evaluateLocally(selectedStudent));
-  const [omrResult, setOmrResult] = useState<CustomOmrResult>(() => evaluateCustomOmr(answerKey.join(" "), selectedStudent.omr.join(" ")));
+  const [statusNote, setStatusNote] = useState<string | null>(null);
+  const [debugError, setDebugError] = useState<DebugError | null>(null);
   const [historyItems, setHistoryItems] = useState<HistoryRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [debugError, setDebugError] = useState<DebugError | null>(null);
 
+  // Initialize scores locally using form details
+  const [result, setResult] = useState<EvaluationResult>(() => {
+    const defaultStudent: Student = {
+      name: "Aarav Sharma",
+      roll: "JEE-2026-014",
+      stream: "JEE",
+      subject: "Physics + Maths",
+      answerText: "Line 1: Used lens formula and sign convention for ray optics.\nLine 2: Substituted focal length and image distance, but one negative sign is missed.\nLine 3: Differentiated the function before simplifying the final value.\nLine 4: Wrote conservation of energy with units.",
+      omr: ["A", "B", "C", "D", "B", "A", "C", "D", "A", "B"],
+      batch: "Super-30",
+      section: "A",
+      examType: "Mains Mock",
+    };
+    return evaluateLocally(defaultStudent);
+  });
+
+  const [omrResult, setOmrResult] = useState<CustomOmrResult>(() =>
+    evaluateCustomOmr("A B C D B A C D A B", "A B C D B A C D A B")
+  );
+
+  // Fetch History Log
   const fetchHistory = async () => {
     setLoadingHistory(true);
     try {
@@ -104,110 +142,76 @@ export default function EvaluatePage() {
     if (workspace === "history") {
       fetchHistory();
     }
+    // Fade in transition on workspace change
+    gsap.fromTo(
+      ".workspace-content",
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+    );
   }, [workspace]);
 
-  const deleteItem = async (id: string, type: string) => {
-    try {
-      const res = await fetch("/api/evaluations", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, type }),
-      });
-      if (res.ok) {
-        setHistoryItems((prev) => prev.filter((item) => item.id !== id));
-        setStatusNote("History item deleted successfully.");
-      } else {
-        const data = (await res.json().catch(() => ({}))) as { error?: string; debug?: DebugError };
-        setDebugError(data.debug || null);
-        setStatusNote(data.error || `Failed to delete history item. Status: ${res.status}`);
-      }
-    } catch (error) {
-      console.error("Failed to delete:", error);
-      setStatusNote(formatClientError("An error occurred while deleting the history item", error));
-    }
-  };
+  // Demo prefill handler
+  const handlePrefill = (roll: string) => {
+    const s = students.find((x) => x.roll === roll);
+    if (s) {
+      setStudentName(s.name);
+      setRollNumber(s.roll);
+      setBatch(s.batch || "Super-30");
+      setSection(s.section || "A");
+      setSubject(s.subject);
+      setStream(s.stream);
+      setExamType(s.examType || "Mains Mock");
+      setAnswerText(s.answerText);
+      setOmrResponseText(s.omr.join(" "));
 
-  const clearHistory = async () => {
-    if (!confirm("Are you sure you want to clear all history?")) return;
-    try {
-      const res = await fetch("/api/evaluations", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clearAll: true }),
-      });
-      if (res.ok) {
-        setHistoryItems([]);
-        setStatusNote("All history logs cleared.");
-      } else {
-        const data = (await res.json().catch(() => ({}))) as { error?: string; debug?: DebugError };
-        setDebugError(data.debug || null);
-        setStatusNote(data.error || `Failed to clear history. Status: ${res.status}`);
-      }
-    } catch (error) {
-      console.error("Failed to clear history:", error);
-      setStatusNote(formatClientError("An error occurred while clearing history", error));
-    }
-  };
-
-  const loadHistoryItem = (item: HistoryRecord) => {
-    if (item.type === "descriptive") {
-      const savedStudent = item.resultJson.student as Partial<Student> | undefined;
-      const student: Student = {
-        name: savedStudent?.name || item.title.replace(/\s*\(NEET\)|\s*\(JEE\)/g, ""),
-        roll: savedStudent?.roll || item.subtitle.split(" - Roll: ").pop() || "",
-        stream: savedStudent?.stream || (item.title.includes("NEET") ? "NEET" : "JEE"),
-        subject: savedStudent?.subject || item.subtitle.split(" - Roll: ")[0] || "",
-        answerText: savedStudent?.answerText || String(item.resultJson.answerText || ""),
-        omr: savedStudent?.omr || [],
+      const currentStudent: Student = {
+        name: s.name,
+        roll: s.roll,
+        stream: s.stream,
+        subject: s.subject,
+        answerText: s.answerText,
+        omr: s.omr,
+        batch: s.batch || "Super-30",
+        section: s.section || "A",
+        examType: s.examType || "Mains Mock",
       };
-      setSelectedRoll(student.roll || selectedRoll);
-      setAnswerText(String(item.resultJson.answerText || ""));
-      setMarkingCriteria(String(item.resultJson.rubricText || criteriaText));
-      setResult(item.resultJson as unknown as EvaluationResult);
-      setStatusNote(`Loaded descriptive evaluation for ${student.name} from history.`);
-      setWorkspace("insights");
-    } else {
-      setOmrKeyText(String(item.resultJson.answerKey || ""));
-      setOmrResponseText(String(item.resultJson.responses || ""));
-      setOmrResult(item.resultJson as unknown as CustomOmrResult);
-      setStatusNote(`Loaded OMR evaluation from history.`);
-      setWorkspace("omr");
+
+      setResult(evaluateLocally(currentStudent));
+      setOmrResult(evaluateCustomOmr(omrKeyText, s.omr.join(" ")));
+      setStatusNote(`Prefilled form details for ${s.name}. Click evaluate below to run AI check.`);
     }
   };
 
-  const streamStudents = useMemo(
-    () => students.filter((student) => student.stream === stream),
-    [stream]
-  );
-  const ranked = useMemo(
-    () => rankStudents(streamStudents.map((student) => ({ student, result: evaluateLocally(student) }))),
-    [streamStudents]
-  );
-
-  const selectStream = (next: Stream) => {
-    const nextStudent = students.find((student) => student.stream === next) || students[0];
-    setStream(next);
-    selectStudent(nextStudent);
-  };
-
-  const selectStudent = (student: Student) => {
-    setSelectedRoll(student.roll);
-    setAnswerText(student.answerText);
-    setOmrResponseText(student.omr.join(" "));
-    setResult(evaluateLocally(student));
-    setOmrResult(evaluateCustomOmr(omrKeyText, student.omr.join(" ")));
-  };
-
+  // Run descriptive answer evaluation
   const runDescriptive = async () => {
+    if (!studentName.trim() || !rollNumber.trim()) {
+      setStatusNote("Please enter Student Name and Roll Number first.");
+      return;
+    }
+
     setLoading(true);
     setStatusNote(null);
     setDebugError(null);
+
+    const currentStudent: Student = {
+      name: studentName.trim(),
+      roll: rollNumber.trim(),
+      stream: stream,
+      subject: subject.trim(),
+      answerText: answerText,
+      omr: omrResponseText ? omrResponseText.trim().split(/\s+/) : [],
+      batch: batch.trim() || undefined,
+      examType: examType.trim() || undefined,
+      section: section.trim() || undefined,
+    };
+
     try {
-      const local = evaluateLocally(selectedStudent, `${answerText}\n${markingCriteria}`);
+      // Immediate local result check as fallback/first glance
+      const local = evaluateLocally(currentStudent, `${answerText}\n${markingCriteria}`);
       setResult(local);
 
       const form = new FormData();
-      form.append("student", JSON.stringify(selectedStudent));
+      form.append("student", JSON.stringify(currentStudent));
       form.append("answerText", answerText);
       form.append("rubricText", markingCriteria);
       answerFileRefs.forEach((file) => form.append("answerFiles", file));
@@ -235,7 +239,13 @@ export default function EvaluatePage() {
     }
   };
 
+  // Run OMR check evaluation
   const runOmr = async () => {
+    if (!omrKeyText.trim()) {
+      setStatusNote("Please enter an Answer Key for OMR comparison.");
+      return;
+    }
+
     setLoading(true);
     setStatusNote(null);
     setDebugError(null);
@@ -251,7 +261,6 @@ export default function EvaluatePage() {
         setOmrResult(evaluateCustomOmr(omrKeyText, omrResponseText));
         setDebugError(data.debug || null);
         setStatusNote(data.error || `OMR API failed with status ${res.status}. Used manual text fallback.`);
-        setWorkspace("omr");
         return;
       }
       if (data.parsedResponses) setOmrResponseText(data.parsedResponses);
@@ -268,6 +277,79 @@ export default function EvaluatePage() {
     }
   };
 
+  // Delete evaluation item
+  const deleteItem = async (id: string, type: string) => {
+    try {
+      const res = await fetch("/api/evaluations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, type }),
+      });
+      if (res.ok) {
+        setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+        setStatusNote("History item deleted successfully.");
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string; debug?: DebugError };
+        setDebugError(data.debug || null);
+        setStatusNote(data.error || `Failed to delete history item. Status: ${res.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      setStatusNote(formatClientError("An error occurred while deleting the history item", error));
+    }
+  };
+
+  // Clear all history logs
+  const clearHistory = async () => {
+    if (!confirm("Are you sure you want to clear all history?")) return;
+    try {
+      const res = await fetch("/api/evaluations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clearAll: true }),
+      });
+      if (res.ok) {
+        setHistoryItems([]);
+        setStatusNote("All history logs cleared.");
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string; debug?: DebugError };
+        setDebugError(data.debug || null);
+        setStatusNote(data.error || `Failed to clear history. Status: ${res.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to clear history:", error);
+      setStatusNote(formatClientError("An error occurred while clearing history", error));
+    }
+  };
+
+  // Load history item back to active states
+  const loadHistoryItem = (item: HistoryRecord) => {
+    if (item.type === "descriptive") {
+      const savedStudent = item.resultJson.student as Partial<Student> | undefined;
+      
+      setStudentName(savedStudent?.name || item.title.replace(/\s*\(NEET\)|\s*\(JEE\)/g, ""));
+      setRollNumber(savedStudent?.roll || item.subtitle.split(" - Roll: ").pop() || "");
+      setStream(savedStudent?.stream || (item.title.includes("NEET") ? "NEET" : "JEE"));
+      setSubject(savedStudent?.subject || item.subtitle.split(" - Roll: ")[0] || "");
+      setBatch(savedStudent?.batch || "");
+      setExamType(savedStudent?.examType || "");
+      setSection(savedStudent?.section || "");
+      
+      setAnswerText(savedStudent?.answerText || String(item.resultJson.answerText || ""));
+      setMarkingCriteria(String(item.resultJson.rubricText || criteriaText));
+      setResult(item.resultJson as unknown as EvaluationResult);
+      setStatusNote(`Loaded descriptive evaluation for ${savedStudent?.name || item.title} from history.`);
+      setWorkspace("insights");
+    } else {
+      setOmrKeyText(String(item.resultJson.answerKey || ""));
+      setOmrResponseText(String(item.resultJson.responses || ""));
+      setOmrResult(item.resultJson as unknown as CustomOmrResult);
+      setStatusNote(`Loaded OMR evaluation from history.`);
+      setWorkspace("omr");
+    }
+  };
+
+  // File selection validation helpers
   const addFiles = (
     files: FileList | null,
     setter: React.Dispatch<React.SetStateAction<UploadedFile[]>>,
@@ -275,7 +357,7 @@ export default function EvaluatePage() {
   ) => {
     if (!files) return;
     const list = Array.from(files);
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
     
     const validFiles = list.filter((file) => {
@@ -296,357 +378,927 @@ export default function EvaluatePage() {
     refSetter?.((prev) => [...prev, ...validFiles]);
   };
 
+  // Export report
   const downloadReport = () => {
-    const html = buildReportHtml(selectedStudent, result, omrResult);
+    const currentStudent: Student = {
+      name: studentName,
+      roll: rollNumber,
+      stream: stream,
+      subject: subject,
+      answerText: answerText,
+      omr: omrResponseText ? omrResponseText.trim().split(/\s+/) : [],
+      batch: batch || undefined,
+      examType: examType || undefined,
+      section: section || undefined,
+    };
+    const html = buildReportHtml(currentStudent, result, omrResult);
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${selectedStudent.roll}-prepforge-evaluation.html`;
+    link.download = `${rollNumber}-prepforge-evaluation.html`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#05070B] text-white">
-      <header className="border-b border-white/10 bg-[#080A10] px-5 py-4 md:px-8">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-300 text-slate-950">
-              <Brain size={20} />
-            </span>
-            <span className="text-lg font-black">Prep<span className="text-teal-300">Forge</span></span>
-          </Link>
-          <div className="hidden sm:flex gap-2">
-            {(["JEE", "NEET"] as Stream[]).map((item) => (
-              <button key={item} onClick={() => selectStream(item)} className={`rounded-xl border px-4 py-2 text-xs font-black ${stream === item ? "border-teal-300 bg-teal-300 text-slate-950" : "border-white/10 text-slate-400"}`}>
-                {item}
-              </button>
-            ))}
+    <main className="min-h-screen bg-background text-foreground pb-12">
+      <Navbar />
+
+      <div className="console-page">
+        {/* Header Greeting */}
+        <header className="console-header">
+          <h1 className="console-greeting">
+            {user?.firstName ? `Welcome, ${user.firstName}` : "Welcome, Faculty"}
+          </h1>
+          <p className="console-subtext">
+            PrepForge Evaluation Console. Input custom details, upload sheets, and check results dynamically.
+          </p>
+        </header>
+
+        {/* Global Warnings / Debug Info */}
+        {statusNote && (
+          <div className="warning-banner" style={{ background: "var(--accent-soft)", borderColor: "var(--border-accent)", color: "var(--text-primary)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Sparkles size={16} className="text-indigo-600" />
+              <span>{statusNote}</span>
+            </div>
           </div>
-        </div>
-      </header>
+        )}
+        {debugError && (
+          <div className="warning-banner" style={{ background: "var(--error-soft)", borderColor: "rgba(239, 68, 68, 0.2)", color: "var(--error)", marginBottom: 20 }}>
+            <strong>{debugError.component} ({debugError.kind}):</strong> {debugError.message}
+          </div>
+        )}
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-5 md:px-8 lg:grid-cols-[300px_minmax(0,1fr)]">
-        
-        {/* Mobile Viewports: Selectors and Horizontal Tabs */}
-        <div className="min-w-0 space-y-4 lg:hidden">
-          {statusNote && (
-            <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
-              {statusNote}
-            </div>
-          )}
-          {debugError && <DebugPanel debug={debugError} />}
+        {/* Console Dashboard Grid */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[380px_1fr]">
           
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-            {/* Student Dropdown Picker */}
-            <div className="min-w-0">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Select Student</label>
-              <select
-                value={selectedRoll}
-                onChange={(e) => {
-                  const student = students.find((s) => s.roll === e.target.value);
-                  if (student) selectStudent(student);
-                }}
-                className="w-full min-w-0 rounded-lg border border-white/10 bg-[#0E121A] p-2.5 text-xs font-bold text-white outline-none focus:border-teal-300"
-              >
-                {students.filter((s) => s.stream === stream).map((s) => (
-                  <option key={s.roll} value={s.roll}>
-                    {s.name} ({s.roll})
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Left Column: Student Details Configurator Form */}
+          <aside className="space-y-4">
+            <div className="student-form-card">
+              <h2>
+                <UserCheck size={18} style={{ color: "var(--accent)" }} />
+                Student Configurator
+              </h2>
 
-            {/* Mobile Stream Selector */}
-            <div className="min-w-0">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Stream Focus</label>
-              <div className="flex h-[38px] min-w-0 rounded-lg border border-white/10 bg-[#0E121A] p-1">
-                {(["JEE", "NEET"] as Stream[]).map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => selectStream(item)}
-                    className={`flex-1 rounded-lg text-xs font-black transition-all ${
-                      stream === item
-                        ? "bg-teal-300 text-slate-950"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    {item}
-                  </button>
-                ))}
+              {/* Prefill helper */}
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)" }}>Quick Load Demo Student</label>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) handlePrefill(e.target.value);
+                  }}
+                  defaultValue=""
+                  className="form-group select"
+                  style={{
+                    padding: "10px 14px",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "0.85rem",
+                    background: "var(--bg-primary)",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
+                    outline: "none",
+                    marginTop: 4,
+                  }}
+                >
+                  <option value="" disabled>-- Select a demo student --</option>
+                  {students.map((s) => (
+                    <option key={s.roll} value={s.roll}>
+                      {s.name} ({s.stream})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "16px 0" }} />
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div className="form-group">
+                  <label htmlFor="student-name">Student Name</label>
+                  <input
+                    id="student-name"
+                    type="text"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    placeholder="Enter student name"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="roll-number">Roll Number</label>
+                  <input
+                    id="roll-number"
+                    type="text"
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    placeholder="e.g. JEE-2026-014"
+                  />
+                </div>
+
+                <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div className="form-group">
+                    <label htmlFor="student-batch">Batch</label>
+                    <input
+                      id="student-batch"
+                      type="text"
+                      value={batch}
+                      onChange={(e) => setBatch(e.target.value)}
+                      placeholder="e.g. Super-30"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="student-section">Section</label>
+                    <input
+                      id="student-section"
+                      type="text"
+                      value={section}
+                      onChange={(e) => setSection(e.target.value)}
+                      placeholder="e.g. A"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="student-subject">Subject Focus</label>
+                  <input
+                    id="student-subject"
+                    type="text"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. Physics + Maths"
+                  />
+                </div>
+
+                <div className="form-grid" style={{ gridTemplateColumns: "1fr 1.2fr", gap: 10 }}>
+                  <div className="form-group">
+                    <label htmlFor="student-stream">Stream</label>
+                    <select
+                      id="student-stream"
+                      value={stream}
+                      onChange={(e) => setStream(e.target.value as Stream)}
+                    >
+                      <option value="JEE">JEE</option>
+                      <option value="NEET">NEET</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="student-exam">Exam Type</label>
+                    <input
+                      id="student-exam"
+                      type="text"
+                      value={examType}
+                      onChange={(e) => setExamType(e.target.value)}
+                      placeholder="e.g. Mains Mock"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Horizontal Scrolling Navigation */}
-          <div className="border-b border-white/5 pb-2">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Workspace View</label>
-            <div className="flex max-w-full gap-2 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
+            {/* Live Metrics panel */}
+            <div className="student-form-card" style={{ padding: 20 }}>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 12, color: "var(--text-secondary)" }}>
+                Current Loaded Scores
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ background: "var(--bg-primary)", padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Descriptive</p>
+                  <p style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent)" }}>{result.score}/100</p>
+                </div>
+                <div style={{ background: "var(--bg-primary)", padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>OMR Sheet</p>
+                  <p style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent)" }}>{omrResult.score}/{omrResult.total}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar list of evaluations from history */}
+            <RecentEvaluationsList historyItems={historyItems} onLoad={loadHistoryItem} />
+          </aside>
+
+          {/* Right Column: Workspaces & Dynamic Results */}
+          <section className="min-w-0 space-y-4">
+            
+            {/* Top Workspace Tab Navs */}
+            <nav className="result-tabs">
               {[
-                ["descriptive", "Descriptive", Brain],
-                ["omr", "OMR Check", ScanLine],
-                ["insights", "Gaps & Ranks", BarChart3],
-                ["report", "Report Preview", FileBadge],
-                ["history", "History log", History],
+                ["descriptive", "Descriptive Answers", Brain],
+                ["omr", "OMR Checking", ScanLine],
+                ["insights", "Gaps & Steps", BarChart3],
+                ["report", "Report Card", FileBadge],
+                ["history", "History Logs", History],
               ].map(([id, label, Icon]) => (
                 <button
                   key={id as string}
                   onClick={() => setWorkspace(id as Workspace)}
-                  className={`flex shrink-0 snap-start items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black transition-all ${
-                    workspace === id
-                      ? "border-teal-300 bg-teal-300/10 text-white"
-                      : "border-white/10 bg-black/25 text-slate-400"
-                  }`}
+                  className={`result-tab ${workspace === id ? "active" : ""}`}
+                  style={{ display: "flex", alignItems: "center", gap: 6 }}
                 >
                   <Icon size={14} />
                   {label as string}
                 </button>
               ))}
-            </div>
-          </div>
-        </div>
+            </nav>
 
-        {/* Desktop Viewports: Standard Sidebar Panel */}
-        <aside className="hidden lg:block space-y-4">
-          <Panel icon={ShieldCheck} title="Faculty Evaluation" text="Powered by free Gemini API: Vision OCR for answer sheets & OMR, RAG rubric grading, structured marks and feedback. Add GEMINI_API_KEY in .env to enable." />
-          {statusNote && (
-            <div className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
-              {statusNote}
-            </div>
-          )}
-          {debugError && <DebugPanel debug={debugError} />}
-          <StudentPicker stream={stream} selected={selectedStudent} onSelect={selectStudent} />
-          <nav className="grid gap-2">
-            {[
-              ["descriptive", "Descriptive Answers", Brain],
-              ["omr", "OMR Evaluation", ScanLine],
-              ["insights", "Gaps and Patterns", BarChart3],
-              ["report", "Reports", FileBadge],
-              ["history", "Evaluation History", History],
-            ].map(([id, label, Icon]) => (
-              <button key={id as string} onClick={() => setWorkspace(id as Workspace)} className={`flex items-center gap-3 rounded-xl border p-3 text-left text-sm font-bold ${workspace === id ? "border-teal-300 bg-teal-300/10 text-white" : "border-white/10 bg-black/25 text-slate-400"}`}>
-                <Icon size={16} />
-                {label as string}
-              </button>
-            ))}
-          </nav>
-        </aside>
+            {/* Active Workspace Container (Animated via GSAP) */}
+            <div className="workspace-content">
+              
+              {/* Tab 1: Descriptive Evaluation Config */}
+              {workspace === "descriptive" && (
+                <div className="space-y-4">
+                  <div className="result-card">
+                    <h3>Evaluate Descriptive Answers</h3>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Upload scanned answer images or paste transcript text. Add marking criteria rules below.
+                    </p>
 
-        <section className="min-w-0 space-y-6">
-          <Metrics result={result} omr={omrResult} files={answerFiles.length + criteriaFiles.length + omrFiles.length} />
-
-          {workspace === "descriptive" && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <FeatureCard icon={Upload} title="Scanned answer sheets or images">
-                <UploadDrop inputId="answer-files" onAdd={(files) => addFiles(files, setAnswerFiles, setAnswerFileRefs)} />
-                <FileList files={answerFiles} onRemove={(index) => { setAnswerFiles((prev) => prev.filter((_, i) => i !== index)); setAnswerFileRefs((prev) => prev.filter((_, i) => i !== index)); }} />
-                <Editor label="OCR transcript / typed answer" value={answerText} onChange={setAnswerText} minHeight="min-h-[250px]" />
-              </FeatureCard>
-              <FeatureCard icon={FileText} title="Predefined marking criteria">
-                <UploadDrop inputId="criteria-files" onAdd={(files) => addFiles(files, setCriteriaFiles, setCriteriaFileRefs)} />
-                <FileList files={criteriaFiles} onRemove={(index) => { setCriteriaFiles((prev) => prev.filter((_, i) => i !== index)); setCriteriaFileRefs((prev) => prev.filter((_, i) => i !== index)); }} />
-                <Editor label="Rubric and step marking rules" value={markingCriteria} onChange={setMarkingCriteria} minHeight="min-h-[250px]" />
-                <button onClick={runDescriptive} disabled={loading} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-300 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-60">
-                  {loading ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                  Evaluate Descriptive Answers
-                </button>
-              </FeatureCard>
-            </div>
-          )}
-
-          {workspace === "omr" && (
-            <div className="grid gap-6 lg:grid-cols-[350px_1fr]">
-              <FeatureCard icon={ScanLine} title="Answer key and OMR sheets">
-                <UploadDrop inputId="omr-files" onAdd={(files) => addFiles(files, setOmrFiles, setOmrFileRefs)} />
-                <FileList files={omrFiles} onRemove={(index) => { setOmrFiles((prev) => prev.filter((_, i) => i !== index)); setOmrFileRefs((prev) => prev.filter((_, i) => i !== index)); }} />
-                <Editor label="Answer key" value={omrKeyText} onChange={setOmrKeyText} minHeight="min-h-[90px]" />
-                <Editor label="Student OMR responses" value={omrResponseText} onChange={setOmrResponseText} minHeight="min-h-[90px]" />
-                <button onClick={runOmr} disabled={loading} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-60">
-                  {loading ? <Loader2 className="animate-spin" size={16} /> : <ScanLine size={16} />}
-                  Check OMR Sheet
-                </button>
-              </FeatureCard>
-              <OmrDashboard result={omrResult} />
-            </div>
-          )}
-
-          {workspace === "insights" && (
-            <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-              <div className="space-y-4">
-                <StepGrades result={result} />
-                <GapDashboard result={result} />
-              </div>
-              <RankTable ranks={ranked} selected={selectedStudent} />
-            </div>
-          )}
-
-          {workspace === "report" && (
-            <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-              <ReportPreview student={selectedStudent} result={result} omr={omrResult} />
-              <FeatureCard icon={Download} title="Detailed report export">
-                <button onClick={downloadReport} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-300 px-5 py-3 text-sm font-black text-slate-950">
-                  <Download size={16} />
-                  Download Report
-                </button>
-              </FeatureCard>
-            </div>
-          )}
-
-          {workspace === "history" && (
-            <FeatureCard icon={History} title="Evaluation History Log">
-              <div className="mb-4 flex justify-between items-center flex-wrap gap-2">
-                <p className="text-xs text-slate-400">
-                  Recent descriptive and OMR grading sessions stored in the workspace history.
-                </p>
-                {historyItems.length > 0 && (
-                  <button onClick={clearHistory} className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/25">
-                    Clear All History
-                  </button>
-                )}
-              </div>
-
-              {loadingHistory ? (
-                <div className="flex h-40 items-center justify-center">
-                  <Loader2 className="animate-spin text-teal-300" size={24} />
-                </div>
-              ) : historyItems.length === 0 ? (
-                <div className="rounded-xl border border-white/10 bg-black/25 p-8 text-center text-slate-500">
-                  No evaluation history found. Run descriptive or OMR grading to save records.
-                </div>
-              ) : (
-                <div className="grid gap-3">
-                  {historyItems.map((item) => (
-                    <div key={item.id} className="flex flex-col gap-4 rounded-lg border border-white/10 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.type === "descriptive" ? "bg-teal-300/10 text-teal-300" : "bg-amber-300/10 text-amber-300"}`}>
-                          {item.type === "descriptive" ? <Brain size={18} /> : <ScanLine size={18} />}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="break-words text-sm font-bold text-white">{item.title}</p>
-                          <p className="mt-1 break-words text-xs text-slate-400">{item.subtitle}</p>
-                          <p className="mt-1 text-[10px] text-slate-500">{new Date(item.createdAt).toLocaleString()}</p>
-                        </div>
+                    <div className="upload-section">
+                      <div className="form-group">
+                        <label>1. Upload Student Answer Sheets</label>
+                        <UploadDrop
+                          inputId="answer-files"
+                          onAdd={(files) => addFiles(files, setAnswerFiles, setAnswerFileRefs)}
+                        />
+                        <FileList
+                          files={answerFiles}
+                          onRemove={(index) => {
+                            setAnswerFiles((prev) => prev.filter((_, i) => i !== index));
+                            setAnswerFileRefs((prev) => prev.filter((_, i) => i !== index));
+                          }}
+                        />
                       </div>
-                      
-                      <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-end">
-                        <div className="text-left sm:text-right">
-                          <p className="text-sm font-black text-teal-300">{item.score}/{item.total}</p>
-                          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{item.type}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => loadHistoryItem(item)} className="rounded-lg bg-teal-300 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-teal-200">
-                            Load
-                          </button>
-                          <button onClick={() => deleteItem(item.id, item.type)} className="rounded-lg bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-300 hover:bg-rose-500/35 border border-rose-500/20">
-                            Delete
-                          </button>
-                        </div>
+
+                      <div className="form-group">
+                        <label>2. Upload Custom Marking Criteria</label>
+                        <UploadDrop
+                          inputId="criteria-files"
+                          onAdd={(files) => addFiles(files, setCriteriaFiles, setCriteriaFileRefs)}
+                        />
+                        <FileList
+                          files={criteriaFiles}
+                          onRemove={(index) => {
+                            setCriteriaFiles((prev) => prev.filter((_, i) => i !== index));
+                            setCriteriaFileRefs((prev) => prev.filter((_, i) => i !== index));
+                          }}
+                        />
                       </div>
                     </div>
-                  ))}
+
+                    <div className="form-group">
+                      <label htmlFor="answer-transcript">Typed / OCR Answer Transcript</label>
+                      <textarea
+                        id="answer-transcript"
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                        placeholder="Paste student transcription here..."
+                        style={{ minHeight: "180px", marginTop: 4 }}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: 16 }}>
+                      <label htmlFor="marking-criteria">Marking Rubric & Steps</label>
+                      <textarea
+                        id="marking-criteria"
+                        value={markingCriteria}
+                        onChange={(e) => setMarkingCriteria(e.target.value)}
+                        placeholder="Define grading steps or keywords..."
+                        style={{ minHeight: "140px", marginTop: 4 }}
+                      />
+                    </div>
+
+                    <button
+                      onClick={runDescriptive}
+                      disabled={loading}
+                      className={`evaluate-btn ${loading ? "loading" : ""}`}
+                      style={{ marginTop: 24 }}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="animate-spin" size={18} />
+                          Processing Answer Sheets...
+                        </>
+                      ) : (
+                        <>
+                          <Brain size={18} />
+                          Run Descriptive Evaluation
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
-            </FeatureCard>
-          )}
-        </section>
+
+              {/* Tab 2: OMR Evaluation Check */}
+              {workspace === "omr" && (
+                <div className="grid gap-6 grid-cols-1 xl:grid-cols-[1fr_360px]">
+                  <div className="result-card" style={{ height: "fit-content" }}>
+                    <h3>Scanned OMR Checking</h3>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Upload student bubble sheets to process with Gemini Vision, or enter keys and responses manually.
+                    </p>
+
+                    <div className="form-group" style={{ marginBottom: 16 }}>
+                      <label>Upload Scanned OMR Sheet</label>
+                      <UploadDrop
+                        inputId="omr-files"
+                        onAdd={(files) => addFiles(files, setOmrFiles, setOmrFileRefs)}
+                      />
+                      <FileList
+                        files={omrFiles}
+                        onRemove={(index) => {
+                          setOmrFiles((prev) => prev.filter((_, i) => i !== index));
+                          setOmrFileRefs((prev) => prev.filter((_, i) => i !== index));
+                        }}
+                      />
+                    </div>
+
+                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div className="form-group">
+                        <label htmlFor="omr-key">OMR Answer Key</label>
+                        <input
+                          id="omr-key"
+                          type="text"
+                          value={omrKeyText}
+                          onChange={(e) => setOmrKeyText(e.target.value)}
+                          placeholder="e.g. A B C D B A"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="omr-responses">Student Responses</label>
+                        <input
+                          id="omr-responses"
+                          type="text"
+                          value={omrResponseText}
+                          onChange={(e) => setOmrResponseText(e.target.value)}
+                          placeholder="e.g. A B - D ?"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={runOmr}
+                      disabled={loading}
+                      className="evaluate-btn"
+                      style={{ marginTop: 24, background: "linear-gradient(135deg, var(--warning), #D97706)" }}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="animate-spin" size={18} />
+                          Checking OMR Bubbles...
+                        </>
+                      ) : (
+                        <>
+                          <ScanLine size={18} />
+                          Evaluate OMR Sheet
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <OmrDashboard result={omrResult} />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: AI Insights & Step marks */}
+              {workspace === "insights" && (
+                <div className="space-y-4">
+                  {/* Stepwise evaluation results */}
+                  <div className="result-card">
+                    <h3>Step-wise Grades and Chain-of-Thought Reasoning</h3>
+                    <p className="text-sm text-slate-500 mb-6">
+                      AI evaluated marks per rubric point, backed by semantic citations and step verification.
+                    </p>
+                    <StepGrades result={result} />
+                  </div>
+
+                  {/* Syllabus Gap Analysis */}
+                  <GapDashboard result={result} />
+
+                  {/* Retrieval pipeline trace */}
+                  <RetrievalTracePanel result={result} />
+                </div>
+              )}
+
+              {/* Tab 4: Printable dynamic report card */}
+              {workspace === "report" && (
+                <div className="grid gap-6 grid-cols-1 xl:grid-cols-[1fr_260px]">
+                  <ReportPreview
+                    student={{
+                      name: studentName,
+                      roll: rollNumber,
+                      stream: stream,
+                      subject: subject,
+                      answerText: answerText,
+                      omr: omrResponseText ? omrResponseText.trim().split(/\s+/) : [],
+                      batch: batch || undefined,
+                      examType: examType || undefined,
+                    }}
+                    result={result}
+                    omr={omrResult}
+                  />
+
+                  <div className="result-card" style={{ height: "fit-content" }}>
+                    <h3>Report Actions</h3>
+                    <p className="text-xs text-slate-500 mb-4">
+                      Export this student evaluation as a standalone HTML file containing step grades and gap analytics.
+                    </p>
+                    <button
+                      onClick={downloadReport}
+                      className="btn-primary w-full"
+                      style={{ justifyContent: "center" }}
+                    >
+                      <Download size={16} />
+                      Download HTML
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 5: Evaluation history */}
+              {workspace === "history" && (
+                <div className="result-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <h3>Evaluation History Log</h3>
+                      <p className="text-sm text-slate-500">
+                        Historical list of descriptive and OMR checking sessions saved to the database.
+                      </p>
+                    </div>
+                    {historyItems.length > 0 && (
+                      <button
+                        onClick={clearHistory}
+                        className="file-item-remove"
+                        style={{ padding: "8px 16px", borderRadius: "var(--radius-md)" }}
+                      >
+                        Clear All History
+                      </button>
+                    )}
+                  </div>
+
+                  {loadingHistory ? (
+                    <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
+                      <Loader2 className="animate-spin text-[var(--accent)]" size={32} />
+                    </div>
+                  ) : historyItems.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-tertiary)" }}>
+                      <History size={40} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
+                      <p>No historical evaluation records found.</p>
+                    </div>
+                  ) : (
+                    <div className="history-list">
+                      {historyItems.map((item) => (
+                        <div key={item.id} className="history-item">
+                          <div className="history-meta">
+                            <span className="history-name">{item.title}</span>
+                            <span className="history-detail">{item.subtitle}</span>
+                            <span className="history-detail" style={{ fontSize: "0.7rem", marginTop: 4 }}>
+                              {new Date(item.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                            <div style={{ textAlign: "right" }}>
+                              <p className="history-score">{item.score}/{item.total}</p>
+                              <p className="history-detail" style={{ textTransform: "uppercase", fontSize: "0.68rem", fontWeight: 700, color: "var(--accent)" }}>
+                                {item.type}
+                              </p>
+                            </div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button
+                                onClick={() => loadHistoryItem(item)}
+                                className="btn-secondary"
+                                style={{ padding: "6px 12px", fontSize: "0.78rem" }}
+                              >
+                                Load
+                              </button>
+                              <button
+                                onClick={() => deleteItem(item.id, item.type)}
+                                className="file-item-remove"
+                                style={{ border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, padding: 0 }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </section>
+
+        </div>
       </div>
     </main>
   );
 }
 
-function Metrics({ result, omr, files }: { result: EvaluationResult; omr: CustomOmrResult; files: number }) {
-  const metrics = [
-    ["Descriptive", `${result.score}/${result.total}`],
-    ["OMR", `${omr.score}/${omr.total}`],
-    ["Accuracy", `${omr.accuracy}%`],
-    ["Uploads", files],
-  ];
+// OMR Bubble Scorer View
+function OmrDashboard({ result }: { result: CustomOmrResult }) {
   return (
-    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-      {metrics.map(([label, value]) => (
-        <div key={label} className="min-w-0 rounded-lg border border-white/10 bg-black/35 p-4">
-          <p className="break-words text-xl font-black text-teal-300 sm:text-2xl">{value}</p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+    <div className="space-y-4">
+      <div className="result-card">
+        <h3>OMR Performance Audit</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+          {[
+            ["Correct", result.correct, "var(--success-soft)", "var(--success)"],
+            ["Wrong", result.wrong, "var(--error-soft)", "var(--error)"],
+            ["Blank", result.blank, "var(--bg-surface)", "var(--text-secondary)"],
+            ["Review", result.anomalies.length, "var(--warning-soft)", "var(--warning)"],
+          ].map(([label, value, bg, color]) => (
+            <div
+              key={label}
+              style={{
+                background: bg as string,
+                color: color as string,
+                padding: "10px 6px",
+                borderRadius: "var(--radius-md)",
+                textAlign: "center",
+                border: `1px solid ${label === "Blank" ? "var(--border)" : "transparent"}`,
+              }}
+            >
+              <p style={{ fontSize: "1.25rem", fontWeight: 800 }}>{value}</p>
+              <p style={{ fontSize: "0.7rem", opacity: 0.85, fontWeight: 600 }}>{label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "300px", overflowY: "auto", paddingRight: 4 }}>
+          {result.items.map((item) => (
+            <div
+              key={item.question}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--bg-card)",
+              }}
+            >
+              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", minWidth: 28 }}>
+                Q{item.question}
+              </span>
+              
+              <div style={{ display: "flex", gap: 5 }}>
+                {["A", "B", "C", "D"].map((option) => {
+                  const isSelected = item.selected === option;
+                  const isCorrect = item.correct === option;
+                  let bg = "transparent";
+                  let border = "1px solid var(--border)";
+                  let color = "var(--text-tertiary)";
+
+                  if (isSelected) {
+                    if (item.status === "correct") {
+                      bg = "var(--success)";
+                      border = "1px solid var(--success)";
+                      color = "white";
+                    } else if (item.status === "wrong") {
+                      bg = "var(--error)";
+                      border = "1px solid var(--error)";
+                      color = "white";
+                    } else {
+                      bg = "var(--warning)";
+                      border = "1px solid var(--warning)";
+                      color = "white";
+                    }
+                  } else if (isCorrect) {
+                    bg = "var(--success-soft)";
+                    border = "1px solid var(--success)";
+                    color = "var(--success)";
+                  }
+
+                  return (
+                    <span
+                      key={option}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        background: bg,
+                        border: border,
+                        color: color,
+                      }}
+                    >
+                      {option}
+                    </span>
+                  );
+                })}
+              </div>
+
+              <span style={{ fontSize: "0.8rem", fontWeight: 700, minWidth: 44, textAlign: "right" }}>
+                {item.status === "anomaly" ? "Review" : item.score > 0 ? `+${item.score}` : item.score}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="result-card">
+        <h3>Subject Breakdown</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {result.subjectWise.map((sub) => (
+            <div
+              key={sub.subject}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "10px 14px",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-md)",
+                background: "var(--bg-surface)",
+              }}
+            >
+              <div>
+                <p style={{ fontWeight: 700, fontSize: "0.85rem" }}>{sub.subject}</p>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>{sub.accuracy}% accuracy</p>
+              </div>
+              <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent)" }}>
+                {sub.score}/{sub.total}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// StepWise detailed Grades
+function StepGrades({ result }: { result: EvaluationResult }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {result.stepGrades.map((grade) => (
+        <div key={grade.rubricId} className="step-grade">
+          <div className="step-grade-header">
+            <span className="step-grade-topic">{grade.topic}</span>
+            <span className={`step-grade-score ${grade.status}`}>
+              {grade.awarded}/{grade.max}
+            </span>
+          </div>
+
+          <p style={{ fontSize: "0.82rem", color: "var(--text-tertiary)", marginBottom: 8 }}>
+            <strong>Expected:</strong> {grade.expected}
+          </p>
+
+          {grade.reasoning && (
+            <div className="step-grade-reasoning">
+              <span style={{ fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+                Chain-of-Thought Grading
+              </span>
+              {grade.reasoning}
+            </div>
+          )}
+
+          <p className="step-grade-note">{grade.note}</p>
+
+          {grade.citations && grade.citations.length > 0 && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+              {grade.citations.map((citation) => (
+                <p key={citation.id} className="step-grade-evidence" title={citation.excerpt}>
+                  &ldquo;{citation.excerpt}&rdquo; &mdash; <strong>{citation.source}</strong> (line {citation.line})
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       ))}
+      {result.aiText && (
+        <div style={{ background: "var(--accent-soft)", border: "1px solid var(--border-accent)", borderRadius: "var(--radius-md)", padding: 16, fontSize: "0.88rem", lineHeight: 1.6 }}>
+          <strong>Faculty Feedback Summary:</strong>
+          <p style={{ marginTop: 4, color: "var(--text-secondary)" }}>{result.aiText}</p>
+        </div>
+      )}
+      {result.warning && (
+        <div className="warning-banner" style={{ margin: 0 }}>
+          {result.warning}
+        </div>
+      )}
     </div>
   );
 }
 
-function DebugPanel({ debug }: { debug: DebugError }) {
+// Strengths, gaps, and action item dashboard block
+function GapDashboard({ result }: { result: EvaluationResult }) {
   return (
-    <details className="rounded-xl border border-rose-300/25 bg-rose-300/10 p-3 text-xs text-rose-100">
-      <summary className="cursor-pointer font-black">
-        {debug.component} - {debug.kind}: {debug.message}
-      </summary>
-      <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-black/40 p-3 text-[11px] leading-5 text-rose-50">
-        {JSON.stringify(debug, null, 2)}
-      </pre>
-    </details>
-  );
-}
-
-function Panel({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-black/35 p-5">
-      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-300/10 text-teal-200">
-        <Icon size={20} />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+      
+      <div className="result-card" style={{ margin: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <BadgeCheck color="var(--success)" size={20} />
+          <h3>Key Strengths</h3>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {result.strengths.map((item) => (
+            <span key={item} className="tag strength">{item}</span>
+          ))}
+        </div>
       </div>
-      <h2 className="font-black">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-    </div>
-  );
-}
-
-function FeatureCard({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
-  return (
-    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.025] p-4 shadow-2xl sm:p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-300/10 text-teal-200">
-          <Icon size={18} />
-        </span>
-        <h2 className="min-w-0 break-words font-black">{title}</h2>
+      
+      <div className="result-card" style={{ margin: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <AlertTriangle color="var(--error)" size={20} />
+          <h3>Syllabus Gaps</h3>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {result.gaps.map((item) => (
+            <span key={item} className="tag gap">{item}</span>
+          ))}
+        </div>
       </div>
-      {children}
+
+      <div className="result-card" style={{ margin: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <MessageSquareText color="var(--info)" size={20} />
+          <h3>Action Plan Recommendations</h3>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {result.recommendations.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--text-secondary)",
+                lineHeight: 1.5,
+                background: "var(--bg-surface)",
+                padding: 10,
+                borderRadius: "var(--radius-sm)",
+                borderLeft: "3px solid var(--info)",
+              }}
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
 
-function StudentPicker({ stream, selected, onSelect }: { stream: Stream; selected: Student; onSelect: (student: Student) => void }) {
+// Trace logs
+function RetrievalTracePanel({ result }: { result: EvaluationResult }) {
   return (
-    <div className="grid gap-2">
-      {students.filter((student) => student.stream === stream).map((student) => (
-        <button key={student.roll} onClick={() => onSelect(student)} className={`rounded-lg border p-4 text-left ${selected.roll === student.roll ? "border-teal-300 bg-teal-300/10" : "border-white/10 bg-black/25"}`}>
-          <p className="break-words font-black">{student.name}</p>
-          <p className="mt-1 break-words text-xs text-slate-500">{student.roll} - {student.subject}</p>
-        </button>
-      ))}
+    <div className="result-card">
+      <h3>AI Grading Pipeline Retrieval Trace</h3>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {result.retrievalTrace.map((trace, index) => (
+          <div key={index} className="trace-step">
+            <span className="trace-badge">{trace.stage}</span>
+            <span className="trace-detail">{trace.detail}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
+// Side List of Recent Evaluations
+function RecentEvaluationsList({
+  historyItems,
+  onLoad,
+}: {
+  historyItems: HistoryRecord[];
+  onLoad: (item: HistoryRecord) => void;
+}) {
+  const descriptiveHistory = historyItems.filter((h) => h.type === "descriptive");
+  if (!descriptiveHistory.length) return null;
+
+  return (
+    <div className="student-form-card" style={{ padding: 20 }}>
+      <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 12, color: "var(--text-secondary)" }}>
+        Recent Evaluations
+      </h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "250px", overflowY: "auto", paddingRight: 4 }}>
+        {descriptiveHistory.slice(0, 5).map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onLoad(item)}
+            className="w-full text-left p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent)] hover:bg-[var(--bg-card-hover)] transition-all flex flex-col gap-1"
+          >
+            <div className="flex justify-between items-start gap-2">
+              <span className="font-semibold text-xs text-[var(--text-primary)] truncate" style={{ maxWidth: "160px" }}>
+                {item.title}
+              </span>
+              <span className="font-bold text-xs text-[var(--accent)] shrink-0">
+                {item.score}/{item.total}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400 truncate">
+              {item.subtitle}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Printable dynamic report card
+function ReportPreview({
+  student,
+  result,
+  omr,
+}: {
+  student: Student;
+  result: EvaluationResult;
+  omr: CustomOmrResult;
+}) {
+  return (
+    <div className="result-card" style={{ background: "var(--bg-card)", color: "var(--text-primary)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, borderBottom: "1px solid var(--border)", paddingBottom: 20, marginBottom: 20 }}>
+        <div>
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--accent)" }}>
+            PrepForge Evaluation Report
+          </p>
+          <h2 style={{ fontSize: "1.75rem", fontWeight: 800, marginTop: 4 }}>{student.name}</h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 2 }}>
+            Roll: {student.roll} | Stream: {student.stream} | Subject: {student.subject} {student.batch && `| Batch: ${student.batch}`}
+          </p>
+        </div>
+        <div style={{ background: "var(--accent-soft)", padding: "12px 20px", borderRadius: "var(--radius-md)", textAlign: "right", border: "1px solid var(--border-accent)" }}>
+          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--accent)", lineHeight: 1 }}>
+            {result.score}/100
+          </p>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 4 }}>
+            OMR: {omr.score}/{omr.total}
+          </p>
+        </div>
+      </div>
+      
+      <div style={{ marginBottom: 24 }}>
+        <h4 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 8 }}>Executive Summary</h4>
+        <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>{result.summary}</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+        <div style={{ background: "var(--bg-surface)", padding: 16, borderRadius: "var(--radius-md)" }}>
+          <h5 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--success)", marginBottom: 8 }}>Strengths</h5>
+          <ul style={{ paddingLeft: 16, fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            {result.strengths.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div style={{ background: "var(--bg-surface)", padding: 16, borderRadius: "var(--radius-md)" }}>
+          <h5 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--error)", marginBottom: 8 }}>Gaps & Weaknesses</h5>
+          <ul style={{ paddingLeft: 16, fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            {result.gaps.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div style={{ background: "var(--bg-surface)", padding: 16, borderRadius: "var(--radius-md)" }}>
+          <h5 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--info)", marginBottom: 8 }}>Action Items</h5>
+          <ul style={{ paddingLeft: 16, fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            {result.recommendations.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Drag & Drop Area Component
 function UploadDrop({ inputId, onAdd }: { inputId: string; onAdd: (files: FileList | null) => void }) {
   return (
-    <label htmlFor={inputId} className="block cursor-pointer rounded-lg border border-dashed border-white/15 bg-black/25 p-5 text-center hover:border-teal-300/50">
+    <label htmlFor={inputId} className="upload-zone" style={{ display: "block", marginTop: 4 }}>
       <input id={inputId} type="file" multiple className="hidden" onChange={(event) => onAdd(event.target.files)} />
-      <Upload className="mx-auto mb-2 text-teal-300" size={24} />
-      <p className="text-sm font-black">Upload files</p>
-      <p className="mt-1 text-xs text-slate-500">Images, PDFs, scans, answer keys, and OMR sheets</p>
+      <Upload className="mx-auto mb-2 text-indigo-500" size={24} style={{ color: "var(--accent)" }} />
+      <h4>Click or Drag Files here</h4>
+      <p>Supports scanned JPG, PNG, WEBP and PDF up to 5MB</p>
     </label>
   );
 }
 
+// Uploaded file list
 function FileList({ files, onRemove }: { files: UploadedFile[]; onRemove: (index: number) => void }) {
-  if (!files.length) return <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-sm text-slate-500">No files added yet.</div>;
+  if (!files.length) return null;
   return (
-    <div className="mt-3 space-y-2">
+    <div className="file-list">
       {files.map((file, index) => (
-        <div key={`${file.name}-${index}`} className="flex min-w-0 items-center gap-3 rounded-lg border border-white/10 bg-black/30 p-3">
-          <FileText size={16} className="text-teal-300" />
-          <p className="min-w-0 flex-1 break-all text-sm">{file.name}</p>
-          <button onClick={() => onRemove(index)} className="text-slate-500 hover:text-rose-300">
-            <X size={15} />
+        <div key={`${file.name}-${index}`} className="file-item">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <FileText size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />
+            <span className="file-item-name truncate">{file.name}</span>
+          </div>
+          <button onClick={() => onRemove(index)} className="file-item-remove">
+            Remove
           </button>
         </div>
       ))}
@@ -654,174 +1306,15 @@ function FileList({ files, onRemove }: { files: UploadedFile[]; onRemove: (index
   );
 }
 
-function Editor({ label, value, onChange, minHeight }: { label: string; value: string; onChange: (value: string) => void; minHeight: string }) {
-  return (
-    <label className="mt-4 block">
-      <span className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} className={`${minHeight} w-full resize-y rounded-lg border border-white/10 bg-black/35 p-4 text-sm leading-7 text-slate-200 outline-none focus:border-teal-300/50`} />
-    </label>
-  );
-}
-
-function StepGrades({ result }: { result: EvaluationResult }) {
-  return (
-    <FeatureCard icon={Brain} title="Step-wise marks with citations">
-      <div className="space-y-3">
-        {result.stepGrades.map((grade) => (
-          <div key={grade.rubricId} className="min-w-0 rounded-lg border border-white/10 bg-black/30 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-black">{grade.topic}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-400">{grade.expected}</p>
-              </div>
-              <span className="rounded-lg bg-teal-300 px-3 py-2 text-xs font-black text-slate-950">{grade.awarded}/{grade.max}</span>
-            </div>
-            <p className="mt-3 text-sm text-slate-300">{grade.note}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {grade.citations.map((citation) => (
-                <span key={citation.id} title={citation.excerpt} className="rounded-full border border-sky-300/25 bg-sky-300/10 px-3 py-1 text-[11px] font-bold text-sky-200">
-                  {citation.source}, line {citation.line}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-        {result.aiText && <div className="rounded-lg border border-teal-300/20 bg-teal-300/8 p-4 text-sm leading-7 text-slate-200">{result.aiText}</div>}
-        {result.warning && <div className="rounded-lg border border-amber-300/20 bg-amber-300/8 p-4 text-sm leading-7 text-amber-100">{result.warning}</div>}
-      </div>
-    </FeatureCard>
-  );
-}
-
-function OmrDashboard({ result }: { result: CustomOmrResult }) {
-  return (
-    <div className="space-y-4">
-      <FeatureCard icon={ScanLine} title="OMR score and bubble audit">
-        <div className="mb-4 grid gap-3 grid-cols-2 sm:grid-cols-4">
-          {[["Correct", result.correct], ["Wrong", result.wrong], ["Blank", result.blank], ["Review", result.anomalies.length]].map(([label, value]) => (
-            <div key={label} className="rounded-xl bg-white/[0.04] p-3">
-              <p className="text-xl font-black text-teal-300">{value}</p>
-              <p className="text-xs text-slate-500">{label}</p>
-            </div>
-          ))}
-        </div>
-        <div className="grid gap-2">
-          {result.items.map((item) => (
-            <div key={item.question} className="grid grid-cols-[34px_minmax(0,1fr)_52px] items-center gap-2 rounded-lg border border-white/8 bg-white/[0.025] p-3 sm:grid-cols-[42px_minmax(0,1fr)_70px] sm:gap-3">
-              <span className="text-xs font-black text-slate-500">Q{item.question}</span>
-              <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
-                {["A", "B", "C", "D"].map((option) => (
-                  <span key={option} className={`flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-black ${item.selected === option ? statusColor(item.status) : item.correct === option ? "border-emerald-400/30 text-emerald-200" : "border-white/10 text-slate-600"}`}>
-                    {option}
-                  </span>
-                ))}
-              </div>
-              <span className="text-right text-xs font-black">{item.status === "anomaly" ? "Review" : item.score > 0 ? `+${item.score}` : item.score}</span>
-            </div>
-          ))}
-        </div>
-      </FeatureCard>
-      <FeatureCard icon={BarChart3} title="Subject-wise performance">
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
-          {result.subjectWise.map((subject) => (
-            <div key={subject.subject} className="rounded-lg border border-white/10 bg-black/30 p-4">
-              <p className="font-black">{subject.subject}</p>
-              <p className="mt-2 text-2xl font-black text-teal-300">{subject.score}/{subject.total}</p>
-              <p className="text-xs text-slate-500">{subject.accuracy}% accuracy</p>
-            </div>
-          ))}
-        </div>
-      </FeatureCard>
-    </div>
-  );
-}
-
-function GapDashboard({ result }: { result: EvaluationResult }) {
-  return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-      <DashboardBlock icon={BadgeCheck} title="Strengths" items={result.strengths} />
-      <DashboardBlock icon={AlertTriangle} title="Weaknesses" items={result.gaps} />
-      <DashboardBlock icon={MessageSquareText} title="Improvement Suggestions" items={result.recommendations} />
-    </div>
-  );
-}
-
-function DashboardBlock({ icon: Icon, title, items }: { icon: LucideIcon; title: string; items: string[] }) {
-  return (
-    <FeatureCard icon={Icon} title={title}>
-      <div className="grid gap-2">
-        {items.map((item) => (
-          <div key={item} className="break-words rounded-lg bg-white/[0.04] p-3 text-sm text-slate-300">{item}</div>
-        ))}
-      </div>
-    </FeatureCard>
-  );
-}
-
-function RankTable({ ranks, selected }: { ranks: ReturnType<typeof rankStudents>; selected: Student }) {
-  return (
-    <FeatureCard icon={BarChart3} title="Rank analysis">
-      <div className="space-y-2">
-        {ranks.map((entry) => (
-          <div key={entry.student.roll} className={`rounded-lg border p-3 ${entry.student.roll === selected.roll ? "border-teal-300/50 bg-teal-300/10" : "border-white/8 bg-white/[0.025]"}`}>
-            <div className="flex justify-between gap-3">
-              <p className="min-w-0 break-words text-sm font-black">#{entry.rank} {entry.student.name}</p>
-              <p className="text-sm font-black text-teal-300">{entry.result.score}</p>
-            </div>
-            <p className="mt-1 text-xs text-slate-500">{entry.student.roll}</p>
-          </div>
-        ))}
-      </div>
-    </FeatureCard>
-  );
-}
-
-function ReportPreview({ student, result, omr }: { student: Student; result: EvaluationResult; omr: CustomOmrResult }) {
-  return (
-    <div className="min-w-0 rounded-lg bg-slate-50 p-4 text-slate-950 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-700">PrepForge Student Report</p>
-          <h2 className="mt-2 text-2xl font-black">{student.name}</h2>
-          <p className="text-sm text-slate-500">{student.roll} - {student.stream} - {student.subject}</p>
-        </div>
-        <div className="rounded-lg bg-slate-950 px-5 py-4 text-left text-white sm:text-right">
-          <p className="text-2xl font-black">{result.score}/100</p>
-          <p className="text-xs text-slate-400">OMR {omr.score}/{omr.total}</p>
-        </div>
-      </div>
-      <p className="mt-5 text-sm leading-6 text-slate-700">{result.summary}</p>
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <ReportList title="Strengths" items={result.strengths} />
-        <ReportList title="Weaknesses" items={result.gaps} />
-        <ReportList title="Suggestions" items={result.recommendations} />
-      </div>
-    </div>
-  );
-}
-
-function ReportList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div className="rounded-lg bg-slate-100 p-4">
-      <p className="mb-2 text-sm font-black">{title}</p>
-      {items.map((item) => <p key={item} className="text-sm leading-6 text-slate-700">- {item}</p>)}
-    </div>
-  );
-}
-
-function statusColor(status: string) {
-  if (status === "correct") return "border-emerald-400 bg-emerald-400/20 text-emerald-100";
-  if (status === "wrong") return "border-rose-400 bg-rose-400/20 text-rose-100";
-  return "border-amber-300 bg-amber-300/20 text-amber-100";
-}
-
-function buildReportHtml(student: Student, result: EvaluationResult, omr: CustomOmrResult) {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${student.roll} PrepForge Report</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#0f172a}.score{float:right;background:#0f172a;color:white;padding:16px 20px;border-radius:12px}.card{border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:14px 0}.badge{display:inline-block;margin:4px;padding:5px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:12px}</style></head><body><div class="score"><b>${result.score}/100</b><br>OMR ${omr.score}/${omr.total}</div><h1>PrepForge Report</h1><p>${student.name} | ${student.roll} | ${student.stream}</p><div class="card"><b>Summary</b><p>${result.summary}</p></div><div class="card"><b>Step Marks</b>${result.stepGrades.map((grade) => `<p>${grade.topic}: ${grade.awarded}/${grade.max} - ${grade.note}</p>${grade.citations.map((citation) => `<span class="badge">${citation.source}, line ${citation.line}</span>`).join("")}`).join("")}</div><div class="card"><b>OMR</b><p>Correct: ${omr.correct}, Wrong: ${omr.wrong}, Blank: ${omr.blank}, Accuracy: ${omr.accuracy}%</p></div><div class="card"><b>Improvement Plan</b>${result.recommendations.map((item) => `<p>${item}</p>`).join("")}</div></body></html>`;
-}
-
+// Helper to format client-side errors
 function formatClientError(prefix: string, error: unknown) {
   if (error instanceof Error) {
     return `${prefix}: ${error.message}`;
   }
   return `${prefix}: ${String(error)}`;
+}
+
+// Dynamic report HTML builder
+function buildReportHtml(student: Student, result: EvaluationResult, omr: CustomOmrResult) {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${student.roll} PrepForge Report</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#0f172a}.score{float:right;background:#6366f1;color:white;padding:16px 20px;border-radius:12px}.card{border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:14px 0}.badge{display:inline-block;margin:4px;padding:5px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:12px}</style></head><body><div class="score"><b>${result.score}/100</b><br>OMR ${omr.score}/${omr.total}</div><h1>PrepForge Report</h1><p>Student: ${student.name} | Roll: ${student.roll} | Stream: ${student.stream} ${student.batch ? `| Batch: ${student.batch}` : ""}</p><div class="card"><b>Summary</b><p>${result.summary}</p></div><div class="card"><b>Step Marks</b>${result.stepGrades.map((grade) => `<p>${grade.topic}: ${grade.awarded}/${grade.max} - ${grade.note}</p>${grade.citations.map((citation) => `<span class="badge">${citation.source}, line ${citation.line}</span>`).join("")}`).join("")}</div><div class="card"><b>OMR</b><p>Correct: ${omr.correct}, Wrong: ${omr.wrong}, Blank: ${omr.blank}, Accuracy: ${omr.accuracy}%</p></div><div class="card"><b>Improvement Plan</b>${result.recommendations.map((item) => `<p>${item}</p>`).join("")}</div></body></html>`;
 }
