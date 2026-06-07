@@ -13,6 +13,9 @@ export type Student = {
   subject: string;
   answerText: string;
   omr: string[];
+  batch?: string;
+  examType?: string;
+  section?: string;
 };
 
 export type RubricPoint = {
@@ -40,6 +43,7 @@ export type StepGrade = {
   confidence: number;
   status: "earned" | "partial" | "review";
   note: string;
+  reasoning?: string;
   citations: Citation[];
 };
 
@@ -141,7 +145,7 @@ export const rubricBank: RubricPoint[] = [
 
 export const students: Student[] = [
   {
-    name: "Aarav Sharma",
+    name: "Sample Student A",
     roll: "JEE-2026-014",
     stream: "JEE",
     subject: "Physics + Maths",
@@ -150,7 +154,7 @@ export const students: Student[] = [
     omr: ["A", "B", "C", "D", "B", "A", "C", "D", "A", "B"],
   },
   {
-    name: "Meera Iyer",
+    name: "Sample Student B",
     roll: "NEET-2026-021",
     stream: "NEET",
     subject: "Biology + Chemistry",
@@ -159,7 +163,7 @@ export const students: Student[] = [
     omr: ["C", "B", "C", "A", "D", "A", "B", "D", "A", "C"],
   },
   {
-    name: "Kabir Khan",
+    name: "Sample Student C",
     roll: "JEE-2026-033",
     stream: "JEE",
     subject: "Physics + Chemistry",

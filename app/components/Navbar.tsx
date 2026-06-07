@@ -1,104 +1,133 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, FileBadge, Menu, X } from "lucide-react";
+import { BookOpen, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useAuth, UserButton } from "@clerk/nextjs";
 
 const navLinks = [
+  { label: "Features", href: "/#features" },
   { label: "How It Works", href: "/#workflow" },
-  { label: "Resources", href: "/#evaluation" },
-  { label: "Reports", href: "/#reports" },
-  { label: "Faculty Demo", href: "/evaluate" },
 ];
 
 export default function Navbar() {
+  const { userId } = useAuth();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 26);
+    const onScroll = () => setScrolled(window.scrollY > 20);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
-    <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${scrolled ? "py-3" : "py-5"}`}>
-      <div className="mx-auto max-w-[1180px] px-5">
-        <div
-          className={`flex h-12 items-center justify-between rounded-full px-4 transition-all duration-500 ${
-            scrolled
-              ? "border border-[#2B2548] bg-[#070812]/82 shadow-[0_16px_60px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
-              : "border border-transparent bg-transparent"
-          }`}
-        >
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#7564E8]/35 bg-[#171329] text-[#9D8DFF] shadow-[0_0_22px_rgba(117,100,232,0.24)]">
-              <BookOpen size={13} strokeWidth={2.6} />
-            </span>
-            <span className="text-[18px] font-black tracking-tight text-white">
-              Prep<span className="text-[#8D7BFF]">Forge</span>
-            </span>
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-6 md:px-12 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/95 border-b border-slate-100 shadow-sm backdrop-blur-sm"
+          : "bg-white border-b border-transparent"
+      }`}
+    >
+      <Link href="/" className="flex items-center gap-2.5 font-bold text-xl text-slate-900">
+        <span className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center text-white shadow-sm">
+          <BookOpen size={16} strokeWidth={2.5} />
+        </span>
+        Prep<span className="text-[#7C3AED]">Forge</span>
+      </Link>
+
+      {/* Desktop Navigation */}
+      <nav className="hidden md:flex items-center gap-6">
+        {navLinks.map((link) => (
+          <Link
+            key={link.label}
+            href={link.href}
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            {link.label}
           </Link>
+        ))}
 
-          <nav className="hidden items-center gap-10 lg:flex">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="text-[11px] font-black uppercase tracking-[0.26em] text-[#777B95] transition hover:text-white"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="hidden items-center gap-4 md:flex">
+        {userId ? (
+          <div className="flex items-center gap-4">
             <Link
               href="/evaluate"
-              className="inline-flex items-center gap-2 rounded-full bg-[#7C6FE0] px-5 py-2.5 text-xs font-black text-white shadow-[0_0_30px_rgba(124,111,224,0.38)] transition hover:bg-[#9386FF]"
+              className="text-sm font-semibold text-[#7C3AED] hover:text-[#6D28D9] transition-colors"
             >
-              <FileBadge size={14} />
-              Faculty Console
+              Console
             </Link>
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: { width: 32, height: 32 },
+                },
+              }}
+            />
           </div>
-
-          <button
-            aria-label="Toggle navigation"
-            onClick={() => setOpen((value) => !value)}
-            className="rounded-full border border-white/10 p-2 text-white md:hidden"
+        ) : (
+          <Link
+            href="/sign-in"
+            className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-[#7C3AED] hover:bg-[#6D28D9] transition-all shadow-sm"
           >
-            {open ? <X size={18} /> : <Menu size={18} />}
-          </button>
-        </div>
-
-        {open && (
-          <div className="mt-3 rounded-3xl border border-[#2B2548] bg-[#070812]/96 p-4 shadow-2xl backdrop-blur-2xl md:hidden">
-            <div className="grid gap-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="rounded-2xl px-3 py-3 text-xs font-black uppercase tracking-[0.22em] text-[#A2A6BA] hover:bg-white/[0.05] hover:text-white"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="border-t border-white/10 pt-3">
-                <Link
-                  href="/evaluate"
-                  onClick={() => setOpen(false)}
-                  className="flex w-full justify-center items-center gap-2 rounded-full bg-[#7C6FE0] px-5 py-3 text-xs font-black text-white shadow-[0_0_30px_rgba(124,111,224,0.38)] hover:bg-[#9386FF]"
-                >
-                  <FileBadge size={14} />
-                  Faculty Console
-                </Link>
-              </div>
-            </div>
-          </div>
+            Sign In
+          </Link>
         )}
-      </div>
+      </nav>
+
+      {/* Mobile Toggle Button */}
+      <button
+        aria-label="Toggle navigation"
+        onClick={() => setOpen((v) => !v)}
+        className="block md:hidden p-2 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+      >
+        {open ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* Mobile Menu Drawer */}
+      {open && (
+        <div className="absolute top-16 left-0 right-0 bg-white border-b border-slate-100 p-6 flex flex-col gap-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-200 z-50">
+          {navLinks.map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              onClick={() => setOpen(false)}
+              className="text-base font-medium text-slate-600 hover:text-slate-900 transition-colors py-2"
+            >
+              {link.label}
+            </Link>
+          ))}
+
+          <hr className="border-slate-100 my-1" />
+
+          {userId ? (
+            <div className="flex items-center justify-between py-2">
+              <Link
+                href="/evaluate"
+                onClick={() => setOpen(false)}
+                className="text-base font-semibold text-[#7C3AED] hover:text-[#6D28D9]"
+              >
+                Go to Console
+              </Link>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: { width: 36, height: 36 },
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <Link
+              href="/sign-in"
+              onClick={() => setOpen(false)}
+              className="w-full text-center px-5 py-3 rounded-lg text-base font-semibold text-white bg-[#7C3AED] hover:bg-[#6D28D9] transition-all shadow-sm"
+            >
+              Sign In
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   );
 }

@@ -3,9 +3,20 @@ import { saveEvaluationRecord } from "@/lib/evaluation-store";
 import { fileToBase64, hasGeminiKey, isSupportedScanMimeType } from "@/lib/gemini";
 import { hasMistralKey } from "@/lib/mistralOCR";
 import { generateAnalysis } from "@/lib/hfAnalysis";
-import { evaluateLocally, students, type Student } from "@/lib/evaluation";
+import { evaluateLocally, type Student } from "@/lib/evaluation";
 import { uploadEvaluationFile } from "@/lib/supabase";
 import { logDebugError, normalizeError } from "@/lib/debug";
+
+function buildDefaultStudent(): Student {
+  return {
+    name: "Unknown Student",
+    roll: "N/A",
+    stream: "JEE",
+    subject: "General",
+    answerText: "",
+    omr: [],
+  };
+}
 
 async function parseRequest(req: Request) {
   const contentType = req.headers.get("content-type") || "";
@@ -13,7 +24,7 @@ async function parseRequest(req: Request) {
   if (contentType.includes("multipart/form-data")) {
     const form = await req.formData();
     const studentRaw = form.get("student");
-    const student = studentRaw ? (JSON.parse(String(studentRaw)) as Student) : students[0];
+    const student = studentRaw ? (JSON.parse(String(studentRaw)) as Student) : buildDefaultStudent();
     const answerText = String(form.get("answerText") || "");
     const rubricText = String(form.get("rubricText") || "");
     const files = form.getAll("answerFiles").filter((item): item is File => item instanceof File);
@@ -28,7 +39,7 @@ async function parseRequest(req: Request) {
   };
 
   return {
-    student: body.student || students[0],
+    student: body.student || buildDefaultStudent(),
     answerText: body.answerText || "",
     rubricText: body.rubricText || "",
     files: [] as File[],
@@ -37,7 +48,7 @@ async function parseRequest(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let student: Student = students[0];
+  let student: Student = buildDefaultStudent();
   try {
     const parsed = await parseRequest(req);
     student = parsed.student;
