@@ -187,11 +187,11 @@ export default function CleanPremiumLanding() {
           ─────────────────────────────────────────────────────────────────────── */}
       <section 
         style={{ paddingTop: "144px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full"
+        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full animate-fade-in"
       >
         <div className="max-w-4xl z-10 flex flex-col items-center w-full">
           {/* Subtle Accent Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-100 bg-slate-50 text-[#7C3AED] text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-slate-100 bg-slate-50 text-[#7C3AED] text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm">
             <Sparkles size={13} className="text-[#7C3AED]" />
             AI Evaluation Console
           </div>
@@ -211,14 +211,14 @@ export default function CleanPremiumLanding() {
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full">
             <Link
               href="/evaluate"
-              className="px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg font-semibold text-base shadow-sm transition-all flex items-center gap-2 group cursor-pointer"
+              className="px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-base shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:shadow-[0_6px_20px_rgba(124,58,237,0.35)] transition-all flex items-center gap-2 group cursor-pointer hover:scale-[1.01]"
             >
               Open Faculty Console
               <ArrowRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="#features"
-              className="px-8 py-4 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-lg font-semibold text-base shadow-sm transition-all cursor-pointer"
+              className="px-8 py-4 bg-white border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 rounded-xl font-bold text-base shadow-sm transition-all cursor-pointer hover:scale-[1.01]"
             >
               Explore Features
             </Link>
@@ -248,12 +248,12 @@ export default function CleanPremiumLanding() {
           {featuresList.map((feat, idx) => (
             <div
               key={idx}
-              className="border border-slate-200 rounded-xl p-8 hover:border-slate-350 transition-all duration-205 flex flex-col justify-between bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
+              className="border border-slate-200/80 rounded-2xl p-8 md:p-10 hover:border-slate-350 transition-all duration-205 flex flex-col justify-between bg-white shadow-[0_4px_20px_rgba(15,23,42,0.02)]"
             >
               <div>
-                <div className="inline-flex items-center gap-2 mb-6">
+                <div className="mb-6">
                   <span
-                    className={`inline-block text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                    className={`inline-block text-xs font-bold px-3.5 py-1 rounded-full uppercase tracking-wider ${
                       feat.accent === "orange"
                         ? "bg-orange-50 text-[#F97316]"
                         : "bg-purple-50 text-[#7C3AED]"
@@ -262,16 +262,16 @@ export default function CleanPremiumLanding() {
                     {feat.badge}
                   </span>
                 </div>
-                <h4 className="text-xl font-bold text-[#0F172A] mb-3">{feat.title}</h4>
+                <h4 className="text-2xl font-bold text-[#0F172A] mb-4">{feat.title}</h4>
                 <p className="text-slate-600 text-sm md:text-base leading-relaxed">{feat.desc}</p>
               </div>
-              <div className="mt-8 flex justify-between items-center pt-4 border-t border-slate-50 w-full">
-                <div className="p-2.5 rounded-lg bg-slate-50">
+              <div className="mt-8 flex justify-between items-center pt-6 border-t border-slate-100 w-full">
+                <div className="p-3 rounded-xl bg-slate-50">
                   {feat.icon}
                 </div>
                 <Link
                   href="/evaluate"
-                  className={`text-sm font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
+                  className={`text-sm font-bold flex items-center gap-1 cursor-pointer transition-colors ${
                     feat.accent === "orange"
                       ? "text-[#F97316] hover:text-[#EA580C]"
                       : "text-[#7C3AED] hover:text-[#6D28D9]"
@@ -302,13 +302,15 @@ export default function CleanPremiumLanding() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full">
             {/* The Pain (Manual Paper Grading) */}
-            <div className="bg-white border border-slate-200 p-8 md:p-12 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-sm">
+            <div className="bg-white border border-slate-200/80 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_20px_rgba(15,23,42,0.02)]">
               <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#F97316]" />
               <div>
-                <span className="text-[#F97316] font-bold text-xs uppercase tracking-wider block mb-4">Manual Grading Process</span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-50 text-[#F97316] mb-6">
+                  Manual Grading Process
+                </div>
                 <h4 className="text-2xl font-bold text-[#0F172A] mb-6">Stack & Pen Verification</h4>
                 
-                <ul className="space-y-5">
+                <ul className="space-y-6">
                   <li className="flex items-start gap-3">
                     <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✗</span>
                     <div>
@@ -332,17 +334,19 @@ export default function CleanPremiumLanding() {
                   </li>
                 </ul>
               </div>
-              <p className="text-xs text-slate-400 mt-8 border-t border-slate-100 pt-4">Manual speed average: 12-15 answer sheets per hour.</p>
+              <p className="text-xs text-slate-400 mt-10 border-t border-slate-100 pt-4">Manual speed average: 12-15 answer sheets per hour.</p>
             </div>
 
             {/* The Solution (PrepForge AI Grading) */}
-            <div className="bg-white border border-slate-300 p-8 md:p-12 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_20px_rgba(15,23,42,0.03)] ring-2 ring-[#7C3AED]/10">
+            <div className="bg-white border border-slate-300 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_25px_rgba(15,23,42,0.03)] ring-2 ring-[#7C3AED]/10">
               <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#7C3AED]" />
               <div>
-                <span className="text-[#7C3AED] font-bold text-xs uppercase tracking-wider block mb-4">PrepForge Console</span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-[#7C3AED] mb-6">
+                  PrepForge Console
+                </div>
                 <h4 className="text-2xl font-bold text-[#0F172A] mb-6">AI-Powered Evaluation Suite</h4>
                 
-                <ul className="space-y-5">
+                <ul className="space-y-6">
                   <li className="flex items-start gap-3">
                     <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
                     <div>
@@ -366,10 +370,10 @@ export default function CleanPremiumLanding() {
                   </li>
                 </ul>
               </div>
-              <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between w-full">
+              <div className="mt-10 pt-4 border-t border-slate-100 flex items-center justify-between w-full">
                 <p className="text-xs text-slate-400">Processing speed average: 180 documents per minute.</p>
-                <Link href="/evaluate" className="text-xs font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer">
-                  Launch Console <ArrowRight size={12} />
+                <Link href="/evaluate" className="text-sm font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer">
+                  Launch Console <ArrowRight size={14} className="ml-0.5" />
                 </Link>
               </div>
             </div>
@@ -397,7 +401,7 @@ export default function CleanPremiumLanding() {
             {stepsList.map((step, idx) => (
               <div
                 key={idx}
-                className="bg-white border border-slate-200 hover:border-slate-350 p-6 rounded-xl flex flex-col justify-between transition-all duration-200"
+                className="bg-white border border-slate-200 p-8 rounded-2xl flex flex-col justify-between transition-all duration-200 hover:border-slate-350 shadow-[0_4px_20px_rgba(15,23,42,0.01)]"
               >
                 <div>
                   <span className="text-4xl font-black text-slate-100 tracking-tight block mb-4">
@@ -466,7 +470,7 @@ export default function CleanPremiumLanding() {
             {testimonialsList.map((t, i) => (
               <div
                 key={i}
-                className="border border-slate-200 p-8 rounded-xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.01)] flex flex-col justify-between hover:border-slate-350 transition-colors"
+                className="border border-slate-200/80 p-8 md:p-10 rounded-2xl bg-white shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] flex flex-col justify-between hover:border-slate-350 transition-colors"
               >
                 <div>
                   <Quote size={28} className="text-[#7C3AED]/10 mb-6" />
@@ -474,7 +478,7 @@ export default function CleanPremiumLanding() {
                     &ldquo;{t.quote}&rdquo;
                   </p>
                 </div>
-                <div className="pt-4 border-t border-slate-50 w-full">
+                <div className="pt-6 border-t border-slate-100 w-full mt-4">
                   <h5 className="font-bold text-[#0F172A] text-sm md:text-base">{t.author}</h5>
                   <p className="text-xs text-slate-400 mt-1">{t.role}</p>
                 </div>
@@ -493,7 +497,7 @@ export default function CleanPremiumLanding() {
         id="pricing"
       >
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
+          <div className="text-center max-w-2xl mx-auto mb-20 w-full">
             <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Pricing</h2>
             <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
               Transparent Institutional Plans
@@ -502,112 +506,112 @@ export default function CleanPremiumLanding() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto w-full">
             {/* Basic Plan */}
-            <div className="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-8 md:p-10 flex flex-col justify-between shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] hover:border-slate-350 transition-all duration-200">
               <div>
-                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Starter Portal</h4>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-black text-[#0F172A]">$79</span>
-                  <span className="text-sm text-slate-400 font-medium">/ month</span>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Starter Portal</h4>
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="text-5xl font-black text-[#0F172A] tracking-tight">$79</span>
+                  <span className="text-sm text-slate-400 font-semibold">/ month</span>
                 </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                <ul className="space-y-4 mb-10">
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>Process up to 100 descriptive papers/mo</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>Basic handwriting OCR mapping</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>Standard OMR checking (50 sheets/mo)</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>Basic gap analysis dashboard</span>
                   </li>
                 </ul>
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-3 px-6 rounded-lg text-sm font-semibold bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 transition-colors block cursor-pointer"
+                className="w-full text-center py-4 px-8 rounded-xl text-base font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 transition-all block cursor-pointer hover:border-slate-300 shadow-sm"
               >
                 Get Started
               </Link>
             </div>
 
             {/* Pro Plan (Highlighted) */}
-            <div className="bg-white border-2 border-[#7C3AED] rounded-xl p-8 flex flex-col justify-between shadow-md relative">
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#7C3AED] text-white text-xs font-bold px-3.5 py-1 rounded-full uppercase tracking-wider">
+            <div className="bg-white border-2 border-[#7C3AED] rounded-2xl p-8 md:p-10 flex flex-col justify-between shadow-[0_10px_35px_-10px_rgba(124,58,237,0.15)] relative hover:scale-[1.01] transition-all duration-200">
+              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#7C3AED] text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider z-20 shadow-sm">
                 MOST POPULAR
               </span>
               <div>
-                <h4 className="text-sm font-bold text-[#7C3AED] uppercase tracking-wider mb-2">Pro Faculty</h4>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-black text-[#0F172A]">$189</span>
-                  <span className="text-sm text-slate-400 font-medium">/ month</span>
+                <h4 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-4">Pro Faculty</h4>
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="text-5xl font-black text-[#0F172A] tracking-tight">$189</span>
+                  <span className="text-sm text-slate-400 font-semibold">/ month</span>
                 </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                <ul className="space-y-4 mb-10">
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
                     <span>Unlimited descriptive answer sheets</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
                     <span>Chain-of-Thought AI grading logic</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
                     <span>Unlimited OMR + anomaly auditing</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
                     <span>Advanced cohort gap analytics</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
                     <span>HTML/PDF evaluation reports export</span>
                   </li>
                 </ul>
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-3 px-6 rounded-lg text-sm font-semibold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-colors block cursor-pointer shadow-sm"
+                className="w-full text-center py-4 px-8 rounded-xl text-base font-bold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all block cursor-pointer shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:shadow-[0_6px_20px_rgba(124,58,237,0.35)] z-10"
               >
                 Start Free Trial
               </Link>
             </div>
 
             {/* Enterprise Plan */}
-            <div className="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-8 md:p-10 flex flex-col justify-between shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] hover:border-slate-350 transition-all duration-200">
               <div>
-                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Enterprise System</h4>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-black text-[#0F172A]">$449</span>
-                  <span className="text-sm text-slate-400 font-medium">/ month</span>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Enterprise System</h4>
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="text-5xl font-black text-[#0F172A] tracking-tight">$449</span>
+                  <span className="text-sm text-slate-400 font-semibold">/ month</span>
                 </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                <ul className="space-y-4 mb-10">
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>Institutional API integration layer</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>Unified billing for department profiles</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>SLA guaranteed uptime and support</span>
                   </li>
-                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
                     <span>Dedicated account training & support</span>
                   </li>
                 </ul>
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-3 px-6 rounded-lg text-sm font-semibold bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 transition-colors block cursor-pointer"
+                className="w-full text-center py-4 px-8 rounded-xl text-base font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 transition-all block cursor-pointer hover:border-slate-300 shadow-sm"
               >
                 Contact Institution Team
               </Link>
