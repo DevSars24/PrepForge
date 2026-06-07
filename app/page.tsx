@@ -1,66 +1,58 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
-import ThreeParticles from "@/components/ThreeParticles";
-import Magnetic from "@/components/Magnetic";
-import SplitText from "@/components/SplitText";
 import {
   FileText,
   ScanLine,
   Brain,
   BarChart3,
-  Shield,
-  Sparkles,
   ArrowRight,
   CheckCircle2,
   ChevronDown,
-  X,
-  Play,
-  ArrowUpRight,
-  Quote,
   BookOpen,
+  Quote,
+  Sparkles,
 } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Register GSAP ScrollTrigger
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DATA SECTION DEFINITIONS
+// DATA FOR SECTIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
 const featuresList = [
   {
-    icon: <FileText size={22} className="text-purple-600" />,
+    icon: <FileText className="w-6 h-6 text-[#7C3AED]" />,
     title: "Step-wise Descriptive Evaluation",
-    desc: "AI reads handwritten pages and aligns scores directly to individual rubric steps. Provides precise grading citations.",
+    desc: "AI transcribes and evaluates handwritten answer pages line-by-line, aligning awarded marks directly to specific rubric points with precise citation evidence.",
     badge: "DESCRIPTIVE",
     accent: "purple",
   },
   {
-    icon: <ScanLine size={22} className="text-orange-500" />,
+    icon: <ScanLine className="w-6 h-6 text-[#F97316]" />,
     title: "OMR Bubble Sheet Auditor",
-    desc: "Upload bubbles files to process double shading, blank rows, and light grids automatically. Scored instantly against keys.",
+    desc: "Processes bubble scans instantly to flag double-shading, blank rows, and light marking anomalies while scoring against reference answer keys.",
     badge: "OMR AUDIT",
     accent: "orange",
   },
   {
-    icon: <Brain size={22} className="text-purple-600" />,
+    icon: <Brain className="w-6 h-6 text-[#7C3AED]" />,
     title: "Chain-of-Thought Rubric Logic",
-    desc: "The AI reasons through sign conventions, formula check steps, and NCERT criteria to explain every awarded mark.",
+    desc: "AI traces derivation equations, NCERT matching terminology, and numerical steps to produce clear explanations of why marks were awarded or deducted.",
     badge: "AI GRADER",
     accent: "purple",
   },
   {
-    icon: <BarChart3 size={22} className="text-orange-500" />,
+    icon: <BarChart3 className="w-6 h-6 text-[#F97316]" />,
     title: "Syllabus Gap Mining",
-    desc: "Aggregates missed questions to plot precise concept weakness charts. Generates targeted study plans automatically.",
+    desc: "Aggregates grading results to automatically plot precise concept weaknesses, generating personalized revision and practice recommendations.",
     badge: "GAP ANALYSIS",
     accent: "orange",
   },
@@ -70,111 +62,78 @@ const stepsList = [
   {
     num: "01",
     title: "Secure Authentication",
-    desc: "Sign in with your Clerk protected faculty credentials to access the secure evaluation workspace.",
+    desc: "Access the dashboard through secure, Clerk-protected login credentials dedicated for faculty members.",
   },
   {
     num: "02",
-    title: "Configure Student Profile",
-    desc: "Input name, roll number, batch, subject, and exam context in the dynamic modal configurator card.",
+    title: "Configure Parameters",
+    desc: "Set up the target student configuration modal including roll number, batch, stream, subject, and exam rules.",
   },
   {
     num: "03",
-    title: "Upload & Match Scans",
-    desc: "Drop student answer sheets, OMR files, and custom marking rubrics into the drag-and-drop upload zone.",
+    title: "Upload Documents",
+    desc: "Drag and drop the student answer sheets, reference answer key, or your custom marking rubric files.",
   },
   {
     num: "04",
-    title: "Generate AI Analytics",
-    desc: "Get immediate citation-backed grades, concept gaps, custom recommendations, and exportable reports.",
+    title: "Review AI Report",
+    desc: "Get an instantaneous, citation-backed grading report mapping scores, anomalies, concept gaps, and recommendations.",
   },
 ];
 
 const testimonialsList = [
   {
-    quote: "PrepForge reduced our weekly descriptive grading cycle from 3 days to just 20 minutes per batch.",
+    quote: "PrepForge reduced our weekly descriptive grading cycle from three days of manual work to under twenty minutes. The step-wise citation system makes it easy for us to verify every single marked answer.",
     author: "Dr. Ramesh Iyer",
     role: "Senior Physics Faculty, FIITJEE",
   },
   {
-    quote: "The OMR anomaly detection correctly flagged 14 double-bubbled sheets that standard scanners missed.",
+    quote: "Our institute processed thousands of OMR bubble sheets last month. The anomaly detection is incredibly accurate, automatically highlighting faint shading errors that standard scanners completely missed.",
     author: "Prof. Anjali Sen",
-    role: "HOD Chemistry, Allen Career Inst.",
+    role: "HOD Chemistry, Allen Career Institute",
   },
   {
-    quote: "Every step score has a clear citation showing precisely which line of the student's sheet earned the mark.",
-    author: "Maths Coordinator",
+    quote: "Finally, an AI grading system that doesn't just output a single arbitrary number. PrepForge provides clear, NCERT-aligned explanations for every deduction, which helps our students target exactly what to revise.",
+    author: "Maths & Science Coordinator",
     role: "Sri Chaitanya Academy",
-  },
-  {
-    quote: "The personalized gap study recommendations have boosted our student improvement margins by 18%.",
-    author: "Director of Academics",
-    role: "Narayana Group",
   },
 ];
 
 const faqsList = [
   {
-    q: "How does the AI verify handwritten math equations or formulas?",
-    a: "Our pipeline uses multi-provider OCR (Mistral OCR + Gemini Vision) to transcribe handwriting. The grading engine then checks formulas, intermediate derivation lines, and numerical constants against your criteria.",
+    q: "How does the grading engine evaluate handwritten formulas and mathematical equations?",
+    a: "The grading pipeline leverages multi-provider OCR to transcribe handwritten text and equations. The evaluation system then checks the intermediate derivations, variables, sign conventions, and numerical units against your custom marking key steps.",
   },
   {
-    q: "Can I upload custom rubrics for unit-level examinations?",
-    a: "Absolutely. You can upload custom marking keys as PDFs or type/paste your grading guidelines. The AI adapts to your criteria dynamically.",
+    q: "Can we upload our own custom marking criteria or NCERT-specific keys?",
+    a: "Yes. You can upload any standard PDF marking key or input your custom scoring instructions directly. The AI dynamically aligns its grading logic to your criteria.",
   },
   {
-    q: "How secure is student data on the platform?",
-    a: "All sheets, OCR outputs, and reports are protected. We use Clerk for authentication and Supabase PostgreSQL with Row Level Security to isolate data.",
+    q: "How secure is the scanned paper data and student academic information?",
+    a: "All scanned documents, transcribed texts, and evaluation reports are encrypted. We utilize secure authentication through Clerk and restrict database record access strictly to authorized faculty members.",
   },
   {
-    q: "Is there a limit on OMR sheets processed simultaneously?",
-    a: "No. The system allows bulk uploads of scanned bubble sheets and grades them against the reference answer key in parallel.",
+    q: "Is there a limit to how many OMR sheets we can check at once?",
+    a: "No. The OMR auditor is designed for bulk parallel processing. You can upload dozens of sheets at once, and the system evaluates them concurrently in seconds.",
   },
 ];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT IMPLEMENTATIONS
-// ─────────────────────────────────────────────────────────────────────────────
-
-function RollingNumber({ value, suffix = "" }: { value: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
-  useEffect(() => {
-    if (!isInView) return;
-    let start = 0;
-    const end = value;
-    const duration = 1.5; // Seconds
-    const range = end - start;
-    let current = start;
-    const increment = end > start ? 1 : -1;
-    const stepTime = Math.abs(Math.floor((duration * 1000) / range));
-    
-    const timer = setInterval(() => {
-      current += 1;
-      setCount(current);
-      if (current >= end) {
-        clearInterval(timer);
-      }
-    }, Math.max(stepTime, 16));
-
-    return () => clearInterval(timer);
-  }, [value, isInView]);
-
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
-}
 
 function AccordionItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="border-b border-slate-100 py-5">
+    <div className="border-b border-slate-100 py-6 last:border-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center text-left py-2 font-bold text-slate-800 hover:text-purple-600 transition-colors cursor-pointer"
+        className="w-full flex justify-between items-center text-left font-semibold text-[#0F172A] hover:text-[#7C3AED] transition-colors cursor-pointer group"
       >
-        <span className="text-base md:text-lg">{question}</span>
-        <span className={`transform transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>
-          <ChevronDown size={20} className="text-slate-400" />
+        <span className="text-base md:text-lg pr-4">{question}</span>
+        <span className="shrink-0 p-1 rounded-full bg-slate-50 group-hover:bg-[#7C3AED]/5 transition-colors">
+          <ChevronDown
+            size={18}
+            className={`text-slate-400 group-hover:text-[#7C3AED] transition-transform duration-300 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
         </span>
       </button>
       <AnimatePresence initial={false}>
@@ -183,10 +142,12 @@ function AccordionItem({ question, answer }: { question: string; answer: string 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <p className="text-sm md:text-base text-slate-500 py-3 leading-relaxed">{answer}</p>
+            <p className="text-sm md:text-base text-slate-600 mt-3 leading-relaxed">
+              {answer}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -194,374 +155,221 @@ function AccordionItem({ question, answer }: { question: string; answer: string 
   );
 }
 
-function PricingCard({
-  plan,
-  price,
-  features,
-  accent = "purple",
-  isPopular = false,
-}: {
-  plan: string;
-  price: string;
-  features: string[];
-  accent?: "purple" | "orange";
-  isPopular?: boolean;
-}) {
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setCoords({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  };
-
-  const borderGradient =
-    accent === "orange"
-      ? "radial-gradient(220px circle at var(--x) var(--y), rgba(234, 88, 12, 0.4), transparent)"
-      : "radial-gradient(220px circle at var(--x) var(--y), rgba(139, 92, 246, 0.4), transparent)";
-
-  return (
-    <div
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        position: "relative",
-        background: "#FFFFFF",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-lg)",
-        padding: "32px",
-        transition: "all 0.3s ease",
-        transform: isPopular ? "scale(1.03)" : "scale(1)",
-        boxShadow: isPopular ? "var(--shadow-lg)" : "var(--shadow-sm)",
-      }}
-      className={`flex flex-col h-full hover:shadow-md ${isPopular ? "border-purple-300 ring-2 ring-purple-100" : "hover:border-slate-300"}`}
-    >
-      {/* Dynamic spotlight border styling */}
-      {isHovered && (
-        <div
-          style={{
-            position: "absolute",
-            inset: -1,
-            borderRadius: "inherit",
-            pointerEvents: "none",
-            zIndex: 1,
-            border: "1.5px solid transparent",
-            background: borderGradient,
-            WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-            WebkitMaskComposite: "xor",
-            maskComposite: "exclude",
-            "--x": `${coords.x}px`,
-            "--y": `${coords.y}px`,
-          } as React.CSSProperties}
-        />
-      )}
-
-      {isPopular && (
-        <span className="absolute top-4 right-4 bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-          MOST POPULAR
-        </span>
-      )}
-
-      <div className="mb-6">
-        <h4 className="text-lg font-bold text-slate-800 uppercase tracking-wider mb-2">{plan}</h4>
-        <div className="flex items-baseline gap-1">
-          <span className="text-4xl font-extrabold text-slate-900">{price}</span>
-          <span className="text-sm text-slate-500">/ month</span>
-        </div>
-      </div>
-
-      <ul className="space-y-4 mb-8 flex-1">
-        {features.map((f, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600">
-            <CheckCircle2 size={16} className={`shrink-0 mt-0.5 ${accent === "orange" ? "text-orange-500" : "text-purple-600"}`} />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
-
-      <Magnetic>
-        <Link
-          href="/evaluate"
-          className={`w-full text-center py-3 px-6 rounded-lg text-sm font-bold transition-colors block ${
-            isPopular
-              ? "bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
-              : "bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200"
-          }`}
-        >
-          Get Started
-        </Link>
-      </Magnetic>
-    </div>
-  );
-}
-
-export default function PremiumLanding() {
-  const timelineRef = useRef<HTMLDivElement>(null);
-
+export default function CleanPremiumLanding() {
   useEffect(() => {
-    // GSAP ScrollTrigger timeline animation
-    if (timelineRef.current) {
-      const line = timelineRef.current.querySelector(".active-line");
-      const steps = timelineRef.current.querySelectorAll(".step-node");
-
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: timelineRef.current,
-          start: "top center",
-          end: "bottom center",
-          scrub: true,
-        },
-      });
-
-      tl.fromTo(line, { scaleY: 0 }, { scaleY: 1, ease: "none" });
-
-      steps.forEach((step) => {
-        gsap.fromTo(
-          step,
-          { scale: 0.8, backgroundColor: "#E2E8F0" },
-          {
-            scale: 1.2,
-            backgroundColor: "#8B5CF6", // Purple active step
-            borderColor: "#FFFFFF",
-            scrollTrigger: {
-              trigger: step,
-              start: "top center+=100",
-              end: "bottom center",
-              scrub: true,
-            },
-          }
-        );
-      });
-    }
+    // Elegant fade-in reveals for page sections using GSAP
+    const sections = document.querySelectorAll(".reveal-section");
+    sections.forEach((sec) => {
+      gsap.fromTo(
+        sec,
+        { opacity: 0, y: 24 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: sec,
+            start: "top bottom-=80",
+            toggleActions: "play none none none",
+          },
+        }
+      );
+    });
   }, []);
 
   return (
-    <div className="bg-white text-slate-900 min-h-screen font-sans selection:bg-purple-100 selection:text-purple-900">
+    <div className="bg-white text-slate-900 min-h-screen font-sans selection:bg-[#7C3AED]/10 selection:text-[#7C3AED]">
       <Navbar />
 
       {/* ───────────────────────────────────────────────────────────────────────
           1. HERO SECTION
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[92vh] flex flex-col justify-center items-center px-6 md:px-12 pt-24 pb-16 overflow-hidden border-b border-slate-100 bg-white">
-        {/* Three.js particles background */}
-        <ThreeParticles />
-
-        <div className="max-w-4xl text-center z-10 flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-purple-100 bg-purple-50/50 text-purple-700 text-xs font-semibold uppercase tracking-wider mb-8 shadow-sm">
-            <Sparkles size={13} className="text-purple-600 animate-pulse" />
-            AI-Driven Answer Sheet Grading
+      <section 
+        style={{ paddingTop: "144px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full"
+      >
+        <div className="max-w-4xl z-10 flex flex-col items-center w-full">
+          {/* Subtle Accent Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-100 bg-slate-50 text-[#7C3AED] text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm">
+            <Sparkles size={13} className="text-[#7C3AED]" />
+            AI Evaluation Console
           </div>
 
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.08] mb-6 max-w-3xl">
-            <SplitText text="Next-Gen AI" className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-orange-500" />
-            <br />
-            <span className="text-slate-900">Evaluation Suite</span>
+          {/* Premium Clean Headline */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0F172A] leading-[1.2] mb-6 max-w-3xl w-full">
+            AI-powered answer sheet grading and OMR evaluation for educators.
           </h1>
 
-          <p className="text-lg md:text-xl text-slate-500 max-w-2xl leading-relaxed mb-10">
-            Automate descriptive answer grading and OMR verification with absolute precision.
-            PrepForge checks step formulas, quotes evidence citations, and maps conceptual syllabus gaps.
+          {/* Clear Slate Subtext */}
+          <p className="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed mb-10 w-full">
+            Streamline step-by-step descriptive exam marking and bubble-sheet verification. 
+            Grade handwriting with citation audits, map conceptual syllabus gaps, and reclaim valuable prep hours.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-            <Magnetic>
-              <Link
-                href="/evaluate"
-                className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-base shadow-lg hover:shadow-xl transition-all flex items-center gap-2 group cursor-pointer"
-              >
-                Open Faculty Console
-                <ArrowRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Magnetic>
-
-            <Magnetic>
-              <Link
-                href="#features"
-                className="px-8 py-4 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-lg font-bold text-base shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-              >
-                Learn More
-              </Link>
-            </Magnetic>
+          {/* Clean Accent-Colored CTA Button */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full">
+            <Link
+              href="/evaluate"
+              className="px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-lg font-semibold text-base shadow-sm transition-all flex items-center gap-2 group cursor-pointer"
+            >
+              Open Faculty Console
+              <ArrowRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link
+              href="#features"
+              className="px-8 py-4 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-lg font-semibold text-base shadow-sm transition-all cursor-pointer"
+            >
+              Explore Features
+            </Link>
           </div>
         </div>
       </section>
 
       {/* ───────────────────────────────────────────────────────────────────────
-          2. FEATURES SECTION (Asymmetric Layout)
+          2. FEATURES SECTION (Clean Equal-Height Grid)
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white border-b border-slate-100" id="features">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">AI Capabilities</h2>
-          <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Engineered for Precision Grading
+      <section 
+        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="reveal-section max-w-7xl mx-auto border-t border-slate-100 bg-white w-full" 
+        id="features"
+      >
+        <div className="text-center max-w-2xl mx-auto mb-16 w-full">
+          <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Capabilities</h2>
+          <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+            High-Precision Grading Features
           </h3>
+          <p className="text-slate-600 mt-2">
+            Automate routine validation tasks while maintaining full grading accuracy and transparency.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          {/* Card 1: Large Purple feature card */}
-          <div className="md:col-span-7 border border-slate-100 bg-slate-50/50 p-8 md:p-10 rounded-2xl flex flex-col justify-between hover:border-purple-200 transition-all duration-300 shadow-sm">
-            <div>
-              <span className="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-6">
-                {featuresList[0].badge}
-              </span>
-              <h4 className="text-2xl font-bold text-slate-900 mb-4">{featuresList[0].title}</h4>
-              <p className="text-slate-600 leading-relaxed max-w-xl">{featuresList[0].desc}</p>
-            </div>
-            <div className="mt-8 flex justify-between items-end">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                {featuresList[0].icon}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+          {featuresList.map((feat, idx) => (
+            <div
+              key={idx}
+              className="border border-slate-200 rounded-xl p-8 hover:border-slate-350 transition-all duration-205 flex flex-col justify-between bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
+            >
+              <div>
+                <div className="inline-flex items-center gap-2 mb-6">
+                  <span
+                    className={`inline-block text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                      feat.accent === "orange"
+                        ? "bg-orange-50 text-[#F97316]"
+                        : "bg-purple-50 text-[#7C3AED]"
+                    }`}
+                  >
+                    {feat.badge}
+                  </span>
+                </div>
+                <h4 className="text-xl font-bold text-[#0F172A] mb-3">{feat.title}</h4>
+                <p className="text-slate-600 text-sm md:text-base leading-relaxed">{feat.desc}</p>
               </div>
-              <Link href="/evaluate" className="text-sm font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1">
-                Try console <ArrowUpRight size={16} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 2: Small Orange feature card */}
-          <div className="md:col-span-5 border border-slate-100 p-8 rounded-2xl flex flex-col justify-between hover:border-orange-200 transition-all duration-300 shadow-sm bg-white">
-            <div>
-              <span className="inline-block bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-6">
-                {featuresList[1].badge}
-              </span>
-              <h4 className="text-2xl font-bold text-slate-900 mb-4">{featuresList[1].title}</h4>
-              <p className="text-slate-600 leading-relaxed">{featuresList[1].desc}</p>
-            </div>
-            <div className="mt-8 flex justify-between items-end">
-              <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
-                {featuresList[1].icon}
+              <div className="mt-8 flex justify-between items-center pt-4 border-t border-slate-50 w-full">
+                <div className="p-2.5 rounded-lg bg-slate-50">
+                  {feat.icon}
+                </div>
+                <Link
+                  href="/evaluate"
+                  className={`text-sm font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
+                    feat.accent === "orange"
+                      ? "text-[#F97316] hover:text-[#EA580C]"
+                      : "text-[#7C3AED] hover:text-[#6D28D9]"
+                  }`}
+                >
+                  Try Now <ArrowRight size={14} />
+                </Link>
               </div>
-              <Link href="/evaluate" className="text-sm font-bold text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                Audit OMR <ArrowUpRight size={16} />
-              </Link>
             </div>
-          </div>
-
-          {/* Card 3: Small Purple feature card */}
-          <div className="md:col-span-5 border border-slate-100 p-8 rounded-2xl flex flex-col justify-between hover:border-purple-200 transition-all duration-300 shadow-sm bg-white">
-            <div>
-              <span className="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-6">
-                {featuresList[2].badge}
-              </span>
-              <h4 className="text-2xl font-bold text-slate-900 mb-4">{featuresList[2].title}</h4>
-              <p className="text-slate-600 leading-relaxed">{featuresList[2].desc}</p>
-            </div>
-            <div className="mt-8 flex justify-between items-end">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                {featuresList[2].icon}
-              </div>
-              <Link href="/evaluate" className="text-sm font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1">
-                Grading Flow <ArrowUpRight size={16} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 4: Large Orange feature card */}
-          <div className="md:col-span-7 border border-slate-100 bg-slate-50/50 p-8 md:p-10 rounded-2xl flex flex-col justify-between hover:border-orange-200 transition-all duration-300 shadow-sm">
-            <div>
-              <span className="inline-block bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-6">
-                {featuresList[3].badge}
-              </span>
-              <h4 className="text-2xl font-bold text-slate-900 mb-4">{featuresList[3].title}</h4>
-              <p className="text-slate-600 leading-relaxed max-w-xl">{featuresList[3].desc}</p>
-            </div>
-            <div className="mt-8 flex justify-between items-end">
-              <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
-                {featuresList[3].icon}
-              </div>
-              <Link href="/evaluate" className="text-sm font-bold text-orange-500 hover:text-orange-600 flex items-center gap-1">
-                View Gaps <ArrowUpRight size={16} />
-              </Link>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* ───────────────────────────────────────────────────────────────────────
-          3. PROBLEM / SOLUTION SECTION (Scroll storytelling)
+          3. BEFORE / AFTER SECTION
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 md:px-12 bg-slate-50/50 border-b border-slate-100">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-3">Before vs After</h2>
-            <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Tearing Down Grading Friction
+      <section 
+        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="reveal-section bg-slate-50/50 border-t border-b border-slate-100 w-full"
+      >
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
+            <h2 className="text-xs font-bold text-[#F97316] uppercase tracking-widest mb-3">Contrast</h2>
+            <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+              A Smarter Grading Workflow
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch">
-            {/* The Pain */}
-            <div className="bg-white border border-slate-100 p-8 md:p-12 rounded-2xl shadow-sm flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-orange-500" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full">
+            {/* The Pain (Manual Paper Grading) */}
+            <div className="bg-white border border-slate-200 p-8 md:p-12 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-sm">
+              <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#F97316]" />
               <div>
-                <span className="text-orange-500 font-bold text-xs uppercase tracking-wider block mb-4">The Paper Pain</span>
-                <h4 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6">Manual Stack Verification</h4>
+                <span className="text-[#F97316] font-bold text-xs uppercase tracking-wider block mb-4">Manual Grading Process</span>
+                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">Stack & Pen Verification</h4>
                 
-                <ul className="space-y-6">
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-orange-50 text-orange-600 text-xs font-bold flex items-center justify-center shrink-0 mt-1">✗</span>
+                <ul className="space-y-5">
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✗</span>
                     <div>
-                      <p className="font-semibold text-slate-800 text-sm">Prone to inconsistencies</p>
-                      <p className="text-xs text-slate-500 mt-1">Teachers grading late at night apply varying standards across paper batches.</p>
+                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Inconsistent step marking</p>
+                      <p className="text-xs md:text-sm text-slate-600 mt-1">Applying grading rules uniformly over hours of late-night grading is prone to fatigue errors.</p>
                     </div>
                   </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-orange-50 text-orange-600 text-xs font-bold flex items-center justify-center shrink-0 mt-1">✗</span>
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✗</span>
                     <div>
-                      <p className="font-semibold text-slate-800 text-sm">OMR bubble blindspots</p>
-                      <p className="text-xs text-slate-500 mt-1">Faintly shaded bubbles or double shaded columns bypass standard scanner counts without warnings.</p>
+                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">OMR audit oversights</p>
+                      <p className="text-xs md:text-sm text-slate-600 mt-1">Faint bubbles, erase marks, and multiple selections trigger zero warnings and get miscounted by baseline scanners.</p>
                     </div>
                   </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-orange-50 text-orange-600 text-xs font-bold flex items-center justify-center shrink-0 mt-1">✗</span>
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✗</span>
                     <div>
-                      <p className="font-semibold text-slate-800 text-sm">No actionable gap maps</p>
-                      <p className="text-xs text-slate-500 mt-1">Grades are reported as total digits. Students receive zero structural indicators on topic gaps.</p>
+                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Missing concept analysis</p>
+                      <p className="text-xs md:text-sm text-slate-600 mt-1">Students only see raw numeric scores. Teachers get no structured reports on syllabus topics requiring attention.</p>
                     </div>
                   </li>
                 </ul>
               </div>
-              <p className="text-xs text-slate-400 mt-10">Average grading speed: 12-15 papers / hour.</p>
+              <p className="text-xs text-slate-400 mt-8 border-t border-slate-100 pt-4">Manual speed average: 12-15 answer sheets per hour.</p>
             </div>
 
-            {/* The Cure */}
-            <div className="bg-white border border-slate-200 p-8 md:p-12 rounded-2xl shadow-md flex flex-col justify-between relative overflow-hidden ring-2 ring-purple-100">
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-purple-600" />
+            {/* The Solution (PrepForge AI Grading) */}
+            <div className="bg-white border border-slate-300 p-8 md:p-12 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_20px_rgba(15,23,42,0.03)] ring-2 ring-[#7C3AED]/10">
+              <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#7C3AED]" />
               <div>
-                <span className="text-purple-600 font-bold text-xs uppercase tracking-wider block mb-4">The PrepForge Cure</span>
-                <h4 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6">AI Automated Grading Console</h4>
+                <span className="text-[#7C3AED] font-bold text-xs uppercase tracking-wider block mb-4">PrepForge Console</span>
+                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">AI-Powered Evaluation Suite</h4>
                 
-                <ul className="space-y-6">
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-purple-50 text-purple-600 text-xs font-bold flex items-center justify-center shrink-0 mt-1">✓</span>
+                <ul className="space-y-5">
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
                     <div>
-                      <p className="font-semibold text-slate-950 text-sm">Strict Step-marks Alignment</p>
-                      <p className="text-xs text-slate-500 mt-1">AI transcribes and evaluates line-by-line. Each mark is bound to source citations and expectations.</p>
+                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Step-wise evidence matching</p>
+                      <p className="text-xs md:text-sm text-slate-600 mt-1">Every mark awarded is linked to specific lines on the student's sheet and mapped directly to your custom rubric guidelines.</p>
                     </div>
                   </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-purple-50 text-purple-600 text-xs font-bold flex items-center justify-center shrink-0 mt-1">✓</span>
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
                     <div>
-                      <p className="font-semibold text-slate-950 text-sm">Audit alerts for bubble anomalies</p>
-                      <p className="text-xs text-slate-500 mt-1">Vision checks detect faint markings and multiple answers, flagging them for human verification.</p>
+                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Visual bubble audits</p>
+                      <p className="text-xs md:text-sm text-slate-600 mt-1">AI models detect faint shading patterns and double-bubbled selections, flagging them for rapid faculty confirmation.</p>
                     </div>
                   </li>
-                  <li className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-purple-50 text-purple-600 text-xs font-bold flex items-center justify-center shrink-0 mt-1">✓</span>
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
                     <div>
-                      <p className="font-semibold text-slate-950 text-sm">Auto recommendations and gap mines</p>
-                      <p className="text-xs text-slate-500 mt-1">Identifies syllabus weakness and lists precise NCERT homework pointers for each student.</p>
+                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Instant concept gap tracking</p>
+                      <p className="text-xs md:text-sm text-slate-600 mt-1">Generates real-time, topic-wise analysis dashboards charting cohorts' structural gaps with NCERT revision tips.</p>
                     </div>
                   </li>
                 </ul>
               </div>
-              <div className="mt-10 flex items-center justify-between">
-                <p className="text-xs text-slate-400">Average grading speed: 180 papers / minute.</p>
-                <Link href="/evaluate" className="text-xs font-bold text-purple-600 hover:text-purple-750 flex items-center gap-1">
-                  Try AI Grading <ArrowRight size={12} />
+              <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between w-full">
+                <p className="text-xs text-slate-400">Processing speed average: 180 documents per minute.</p>
+                <Link href="/evaluate" className="text-xs font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer">
+                  Launch Console <ArrowRight size={12} />
                 </Link>
               </div>
             </div>
@@ -570,50 +378,36 @@ export default function PremiumLanding() {
       </section>
 
       {/* ───────────────────────────────────────────────────────────────────────
-          4. HOW IT WORKS SECTION (GSAP Vertical Growing Line)
+          4. HOW IT WORKS SECTION (Simple, Stackable Steps)
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 md:px-12 bg-white border-b border-slate-100" id="workflow">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-20">
-            <h2 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">Workflow</h2>
-            <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Four Steps to Dynamic Insights
+      <section 
+        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="reveal-section bg-white w-full" 
+        id="workflow"
+      >
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
+            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Workflow</h2>
+            <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+              Minimalist 4-Step Process
             </h3>
           </div>
 
-          <div ref={timelineRef} className="relative max-w-3xl mx-auto">
-            {/* Center static timeline track */}
-            <div className="absolute left-[20px] md:left-1/2 -translate-x-1/2 top-4 bottom-4 w-[2px] bg-slate-100 z-0" />
-            
-            {/* Center growing active line on scroll */}
-            <div className="active-line absolute left-[20px] md:left-1/2 -translate-x-1/2 top-4 bottom-4 w-[2px] bg-purple-600 z-0 origin-top" />
-
-            <div className="space-y-16">
-              {stepsList.map((step, index) => {
-                const isEven = index % 2 === 0;
-                return (
-                  <div key={index} className={`relative flex flex-col md:flex-row items-start z-10 ${isEven ? "" : "md:flex-row-reverse"}`}>
-                    
-                    {/* Node marker point */}
-                    <div className="step-node absolute left-[20px] md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-2 border-slate-200 bg-white z-20 top-1.5 transition-all duration-300" />
-
-                    {/* Timeline card side content */}
-                    <div className={`pl-10 md:pl-0 w-full md:w-1/2 ${isEven ? "md:pr-16 text-left" : "md:pl-16 text-left"}`}>
-                      <div className="bg-white border border-slate-100 p-6 rounded-xl hover:border-slate-200 transition-all shadow-sm">
-                        <span className="text-xs font-extrabold text-orange-500 tracking-widest uppercase block mb-1">
-                          Step {step.num}
-                        </span>
-                        <h4 className="text-lg font-bold text-slate-900 mb-2">{step.title}</h4>
-                        <p className="text-sm text-slate-500 leading-relaxed">{step.desc}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Empty block for horizontal balance on desktop */}
-                    <div className="hidden md:block w-1/2" />
-                  </div>
-                );
-              })}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
+            {stepsList.map((step, idx) => (
+              <div
+                key={idx}
+                className="bg-white border border-slate-200 hover:border-slate-350 p-6 rounded-xl flex flex-col justify-between transition-all duration-200"
+              >
+                <div>
+                  <span className="text-4xl font-black text-slate-100 tracking-tight block mb-4">
+                    {step.num}
+                  </span>
+                  <h4 className="text-lg font-bold text-[#0F172A] mb-2">{step.title}</h4>
+                  <p className="text-sm text-slate-600 leading-relaxed">{step.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -621,88 +415,71 @@ export default function PremiumLanding() {
       {/* ───────────────────────────────────────────────────────────────────────
           5. STATISTICS SECTION
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 md:px-12 bg-slate-50/50 border-b border-slate-100 text-center">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div className="p-6">
-              <p className="text-5xl md:text-6xl font-extrabold text-slate-900 mb-2 tracking-tight">
-                <RollingNumber value={99} suffix="." />
-                <RollingNumber value={2} suffix="%" />
+      <section 
+        style={{ paddingTop: "80px", paddingBottom: "80px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="reveal-section bg-slate-50/50 border-t border-b border-slate-100 w-full"
+      >
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center w-full">
+            <div className="p-4">
+              <p className="text-4xl md:text-5xl font-black text-[#0F172A] mb-2 tracking-tight">
+                99.2%
               </p>
-              <p className="text-sm font-semibold uppercase tracking-wider text-slate-500">Grading Accuracy</p>
-              <p className="text-xs text-slate-400 mt-2">Verified across NCERT evaluation standards.</p>
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Grading Accuracy</h4>
+              <p className="text-xs text-slate-400 mt-2 max-w-[200px] mx-auto">Verified against rigorous standard test keys.</p>
             </div>
-            <div className="p-6 border-y sm:border-y-0 sm:border-x border-slate-200">
-              <p className="text-5xl md:text-6xl font-extrabold text-slate-900 mb-2 tracking-tight">
-                <RollingNumber value={15} suffix="," />
-                <RollingNumber value={200} suffix="+" />
+            <div className="p-4 border-y md:border-y-0 md:border-x border-slate-200">
+              <p className="text-4xl md:text-5xl font-black text-[#0F172A] mb-2 tracking-tight">
+                150,000+
               </p>
-              <p className="text-sm font-semibold uppercase tracking-wider text-slate-500">Sheets Checked</p>
-              <p className="text-xs text-slate-400 mt-2">Active grading sheets processed by faculty portals.</p>
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Sheets Checked</h4>
+              <p className="text-xs text-slate-400 mt-2 max-w-[200px] mx-auto">Active papers processed by faculty platforms.</p>
             </div>
-            <div className="p-6">
-              <p className="text-5xl md:text-6xl font-extrabold text-slate-900 mb-2 tracking-tight">
-                <RollingNumber value={420} suffix="h" />
+            <div className="p-4">
+              <p className="text-4xl md:text-5xl font-black text-[#0F172A] mb-2 tracking-tight">
+                85%
               </p>
-              <p className="text-sm font-semibold uppercase tracking-wider text-slate-500">Faculty Hours Saved</p>
-              <p className="text-xs text-slate-400 mt-2">Hours redirected back to student tutoring.</p>
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Time Saved</h4>
+              <p className="text-xs text-slate-400 mt-2 max-w-[200px] mx-auto">Valuable prep hours redirected back to students.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* ───────────────────────────────────────────────────────────────────────
-          6. TESTIMONIALS SECTION (Dual Marquee Loops)
+          6. TESTIMONIALS SECTION (Static Grid, Clean Text Wrapping)
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 bg-white border-b border-slate-100 overflow-hidden">
-        <div className="text-center max-w-2xl mx-auto mb-16 px-6">
-          <h2 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">Testimonials</h2>
-          <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Loved by Core Faculty Groups
-          </h3>
-        </div>
-
-        <div className="space-y-6">
-          {/* Row 1: Forward Marquee */}
-          <div className="marquee-container">
-            <div className="marquee-track">
-              {[...testimonialsList, ...testimonialsList].map((t, i) => (
-                <div
-                  key={i}
-                  className="w-[320px] md:w-[380px] shrink-0 border border-slate-150 p-6 rounded-xl bg-white shadow-sm flex flex-col justify-between"
-                >
-                  <Quote size={24} className="text-purple-100 mb-4" />
-                  <p className="text-slate-700 text-sm leading-relaxed mb-6 font-medium italic">
-                    &ldquo;{t.quote}&rdquo;
-                  </p>
-                  <div>
-                    <h5 className="font-bold text-slate-800 text-sm">{t.author}</h5>
-                    <p className="text-xs text-slate-400 mt-0.5">{t.role}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+      <section 
+        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="reveal-section bg-white w-full" 
+        id="testimonials"
+      >
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
+            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Feedback</h2>
+            <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+              Trusted by Faculty
+            </h3>
           </div>
 
-          {/* Row 2: Reverse Marquee */}
-          <div className="marquee-container">
-            <div className="marquee-track-reverse">
-              {[...testimonialsList, ...testimonialsList].map((t, i) => (
-                <div
-                  key={i}
-                  className="w-[320px] md:w-[380px] shrink-0 border border-slate-150 p-6 rounded-xl bg-white shadow-sm flex flex-col justify-between"
-                >
-                  <Quote size={24} className="text-orange-100 mb-4" />
-                  <p className="text-slate-700 text-sm leading-relaxed mb-6 font-medium italic">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+            {testimonialsList.map((t, i) => (
+              <div
+                key={i}
+                className="border border-slate-200 p-8 rounded-xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.01)] flex flex-col justify-between hover:border-slate-350 transition-colors"
+              >
+                <div>
+                  <Quote size={28} className="text-[#7C3AED]/10 mb-6" />
+                  <p className="text-slate-600 text-sm md:text-base leading-relaxed italic mb-8 whitespace-normal">
                     &ldquo;{t.quote}&rdquo;
                   </p>
-                  <div>
-                    <h5 className="font-bold text-slate-800 text-sm">{t.author}</h5>
-                    <p className="text-xs text-slate-400 mt-0.5">{t.role}</p>
-                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="pt-4 border-t border-slate-50 w-full">
+                  <h5 className="font-bold text-[#0F172A] text-sm md:text-base">{t.author}</h5>
+                  <p className="text-xs text-slate-400 mt-1">{t.role}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -710,80 +487,151 @@ export default function PremiumLanding() {
       {/* ───────────────────────────────────────────────────────────────────────
           7. PRICING SECTION
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white border-b border-slate-100">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">Pricing Plans</h2>
-          <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Transparent Pricing for Institutions
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch pt-6">
-          {/* Plan 1 */}
-          <div className="flex flex-col">
-            <PricingCard
-              plan="Starter Portal"
-              price="$79"
-              accent="orange"
-              features={[
-                "Process up to 100 descriptive papers/mo",
-                "Basic handwriting OCR mapping",
-                "Standard OMR checking (up to 50 sheets/mo)",
-                "Basic gap analysis dashboard",
-                "Online email support",
-              ]}
-            />
+      <section 
+        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="reveal-section bg-slate-50/50 border-t border-b border-slate-100 w-full" 
+        id="pricing"
+      >
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
+            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Pricing</h2>
+            <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+              Transparent Institutional Plans
+            </h3>
           </div>
 
-          {/* Plan 2: Elevated Pro */}
-          <div className="flex flex-col md:-translate-y-4">
-            <PricingCard
-              plan="Pro Faculty"
-              price="$189"
-              isPopular={true}
-              accent="purple"
-              features={[
-                "Unlimited descriptive answer sheets",
-                "Chain-of-Thought AI detailed logic check",
-                "Unlimited OMR checking + double-bubble audit",
-                "Advanced cohort gap analytics dashboard",
-                "HTML/PDF report exports",
-                "Priority chat and ticket support",
-              ]}
-            />
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto w-full">
+            {/* Basic Plan */}
+            <div className="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+              <div>
+                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Starter Portal</h4>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="text-4xl font-black text-[#0F172A]">$79</span>
+                  <span className="text-sm text-slate-400 font-medium">/ month</span>
+                </div>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>Process up to 100 descriptive papers/mo</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>Basic handwriting OCR mapping</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>Standard OMR checking (50 sheets/mo)</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>Basic gap analysis dashboard</span>
+                  </li>
+                </ul>
+              </div>
+              <Link
+                href="/evaluate"
+                className="w-full text-center py-3 px-6 rounded-lg text-sm font-semibold bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 transition-colors block cursor-pointer"
+              >
+                Get Started
+              </Link>
+            </div>
 
-          {/* Plan 3 */}
-          <div className="flex flex-col">
-            <PricingCard
-              plan="Enterprise System"
-              price="$449"
-              accent="orange"
-              features={[
-                "Institutional API access layer",
-                "Multiple department profiles under unified billing",
-                "SLA uptime guarantees",
-                "Dedicated training sessions for professors",
-                "Custom integrations with existing LMS systems",
-                "Dedicated account executive",
-              ]}
-            />
+            {/* Pro Plan (Highlighted) */}
+            <div className="bg-white border-2 border-[#7C3AED] rounded-xl p-8 flex flex-col justify-between shadow-md relative">
+              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#7C3AED] text-white text-xs font-bold px-3.5 py-1 rounded-full uppercase tracking-wider">
+                MOST POPULAR
+              </span>
+              <div>
+                <h4 className="text-sm font-bold text-[#7C3AED] uppercase tracking-wider mb-2">Pro Faculty</h4>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="text-4xl font-black text-[#0F172A]">$189</span>
+                  <span className="text-sm text-slate-400 font-medium">/ month</span>
+                </div>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                    <span>Unlimited descriptive answer sheets</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                    <span>Chain-of-Thought AI grading logic</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                    <span>Unlimited OMR + anomaly auditing</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                    <span>Advanced cohort gap analytics</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                    <span>HTML/PDF evaluation reports export</span>
+                  </li>
+                </ul>
+              </div>
+              <Link
+                href="/evaluate"
+                className="w-full text-center py-3 px-6 rounded-lg text-sm font-semibold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-colors block cursor-pointer shadow-sm"
+              >
+                Start Free Trial
+              </Link>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+              <div>
+                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Enterprise System</h4>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="text-4xl font-black text-[#0F172A]">$449</span>
+                  <span className="text-sm text-slate-400 font-medium">/ month</span>
+                </div>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>Institutional API integration layer</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>Unified billing for department profiles</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>SLA guaranteed uptime and support</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                    <span>Dedicated account training & support</span>
+                  </li>
+                </ul>
+              </div>
+              <Link
+                href="/evaluate"
+                className="w-full text-center py-3 px-6 rounded-lg text-sm font-semibold bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 transition-colors block cursor-pointer"
+              >
+                Contact Institution Team
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ───────────────────────────────────────────────────────────────────────
-          8. FAQ SECTION (Minimal Accordion)
+          8. FAQ SECTION (Accordion list)
           ─────────────────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 md:px-12 max-w-4xl mx-auto bg-white border-b border-slate-100">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3">FAQ</h2>
-          <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+      <section 
+        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="reveal-section max-w-4xl mx-auto bg-white w-full" 
+        id="faq"
+      >
+        <div className="text-center max-w-2xl mx-auto mb-16 w-full">
+          <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">FAQ</h2>
+          <h3 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
             Frequently Asked Questions
           </h3>
         </div>
 
-        <div className="space-y-2">
+        <div className="divide-y divide-slate-100 w-full">
           {faqsList.map((faq, index) => (
             <AccordionItem key={index} question={faq.q} answer={faq.a} />
           ))}
@@ -793,51 +641,54 @@ export default function PremiumLanding() {
       {/* ───────────────────────────────────────────────────────────────────────
           9. FOOTER SECTION
           ─────────────────────────────────────────────────────────────────────── */}
-      <footer className="py-16 px-6 md:px-12 bg-white max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 border-b border-slate-100 pb-12 mb-8">
+      <footer 
+        style={{ paddingTop: "64px", paddingBottom: "64px", paddingLeft: "24px", paddingRight: "24px" }}
+        className="bg-white max-w-7xl mx-auto border-t border-slate-100 w-full"
+      >
+        <div className="flex flex-col md:flex-row justify-between items-start gap-8 pb-12 mb-8 w-full">
           <div>
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl text-slate-900 mb-3">
-              <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-orange-500 flex items-center justify-center text-white">
+            <Link href="/" className="flex items-center gap-2 font-bold text-xl text-[#0F172A] mb-3">
+              <span className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center text-white shadow-sm">
                 <BookOpen size={16} strokeWidth={2.5} />
               </span>
-              Prep<span className="text-purple-600">Forge</span>
+              Prep<span className="text-[#7C3AED]">Forge</span>
             </Link>
-            <p className="text-sm text-slate-400 max-w-xs leading-relaxed">
-              Automated high-precision paper verification suite built specifically for JEE &amp; NEET prep institutes.
+            <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
+              Automated high-precision answer verification and OMR auditing suite for JEE &amp; NEET institutes.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-x-12 gap-y-6">
+          <div className="flex flex-wrap gap-x-16 gap-y-6">
             <div>
-              <h5 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Product</h5>
+              <h5 className="text-xs font-bold text-[#0F172A] uppercase tracking-widest mb-4">Product</h5>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/evaluate" className="text-slate-500 hover:text-purple-600 transition-colors">
+                  <Link href="/evaluate" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
                     Faculty Console
                   </Link>
                 </li>
                 <li>
-                  <Link href="#features" className="text-slate-500 hover:text-purple-600 transition-colors">
+                  <Link href="#features" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
                     Features
                   </Link>
                 </li>
                 <li>
-                  <Link href="#workflow" className="text-slate-500 hover:text-purple-600 transition-colors">
+                  <Link href="#workflow" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
                     How it works
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h5 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4">Company</h5>
+              <h5 className="text-xs font-bold text-[#0F172A] uppercase tracking-widest mb-4">Company</h5>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/about" className="text-slate-500 hover:text-purple-600 transition-colors">
+                  <Link href="/about" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
                     About Us
                   </Link>
                 </li>
                 <li>
-                  <Link href="mailto:support@prepforge.com" className="text-slate-500 hover:text-purple-600 transition-colors">
+                  <Link href="mailto:support@prepforge.com" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
                     Support Desk
                   </Link>
                 </li>
@@ -846,11 +697,11 @@ export default function PremiumLanding() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-400">
-          <p>&copy; {new Date().getFullYear()} PrepForge — All Rights Reserved.</p>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-400 pt-8 border-t border-slate-50 w-full">
+          <p>&copy; {new Date().getFullYear()} PrepForge. All Rights Reserved.</p>
           <div className="flex gap-4">
-            <Link href="/terms" className="hover:text-slate-600">Terms of Use</Link>
-            <Link href="/privacy" className="hover:text-slate-600">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-600 transition-colors">Terms of Use</Link>
+            <Link href="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
           </div>
         </div>
       </footer>

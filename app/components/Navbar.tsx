@@ -31,10 +31,10 @@ export default function Navbar() {
       }`}
     >
       <Link href="/" className="flex items-center gap-2.5 font-bold text-xl text-slate-900">
-        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-orange-500 flex items-center justify-center text-white shadow-sm">
+        <span className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center text-white shadow-sm">
           <BookOpen size={16} strokeWidth={2.5} />
         </span>
-        Prep<span className="text-purple-600">Forge</span>
+        Prep<span className="text-[#7C3AED]">Forge</span>
       </Link>
 
       {/* Desktop Navigation */}
@@ -53,7 +53,7 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <Link
               href="/evaluate"
-              className="text-sm font-semibold text-purple-600 hover:text-purple-750 transition-colors"
+              className="text-sm font-semibold text-[#7C3AED] hover:text-[#6D28D9] transition-colors"
             >
               Console
             </Link>
@@ -68,7 +68,7 @@ export default function Navbar() {
         ) : (
           <Link
             href="/sign-in"
-            className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-orange-500 hover:from-purple-750 hover:to-orange-550 transition-all hover:scale-[1.02] shadow-sm"
+            className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-[#7C3AED] hover:bg-[#6D28D9] transition-all shadow-sm"
           >
             Sign In
           </Link>
@@ -105,7 +105,7 @@ export default function Navbar() {
               <Link
                 href="/evaluate"
                 onClick={() => setOpen(false)}
-                className="text-base font-semibold text-purple-600 hover:text-purple-700"
+                className="text-base font-semibold text-[#7C3AED] hover:text-[#6D28D9]"
               >
                 Go to Console
               </Link>
@@ -121,7 +121,7 @@ export default function Navbar() {
             <Link
               href="/sign-in"
               onClick={() => setOpen(false)}
-              className="w-full text-center px-5 py-3 rounded-lg text-base font-semibold text-white bg-gradient-to-r from-purple-600 to-orange-500 hover:from-purple-700 hover:to-orange-600 transition-all shadow-sm"
+              className="w-full text-center px-5 py-3 rounded-lg text-base font-semibold text-white bg-[#7C3AED] hover:bg-[#6D28D9] transition-all shadow-sm"
             >
               Sign In
             </Link>

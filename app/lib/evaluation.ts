@@ -145,7 +145,7 @@ export const rubricBank: RubricPoint[] = [
 
 export const students: Student[] = [
   {
-    name: "Aarav Sharma",
+    name: "Sample Student A",
     roll: "JEE-2026-014",
     stream: "JEE",
     subject: "Physics + Maths",
@@ -154,7 +154,7 @@ export const students: Student[] = [
     omr: ["A", "B", "C", "D", "B", "A", "C", "D", "A", "B"],
   },
   {
-    name: "Meera Iyer",
+    name: "Sample Student B",
     roll: "NEET-2026-021",
     stream: "NEET",
     subject: "Biology + Chemistry",

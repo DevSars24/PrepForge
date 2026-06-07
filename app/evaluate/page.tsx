@@ -27,7 +27,6 @@ import {
   answerKey,
   evaluateCustomOmr,
   evaluateLocally,
-  students,
   type CustomOmrResult,
   type EvaluationResult,
   type Student,
@@ -63,21 +62,19 @@ export default function EvaluatePage() {
   const [showConfigModal, setShowConfigModal] = useState(false);
 
   // Dynamic Student details states
-  const [studentName, setStudentName] = useState("Aarav Sharma");
-  const [rollNumber, setRollNumber] = useState("JEE-2026-014");
-  const [batch, setBatch] = useState("Super-30");
-  const [section, setSection] = useState("A");
-  const [subject, setSubject] = useState("Physics + Maths");
+  const [studentName, setStudentName] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
+  const [batch, setBatch] = useState("");
+  const [section, setSection] = useState("");
+  const [subject, setSubject] = useState("");
   const [stream, setStream] = useState<Stream>("JEE");
-  const [examType, setExamType] = useState("Mains Mock");
+  const [examType, setExamType] = useState("");
 
   // Input fields for evaluations
-  const [answerText, setAnswerText] = useState(
-    "Line 1: Used lens formula and sign convention for ray optics.\nLine 2: Substituted focal length and image distance, but one negative sign is missed.\nLine 3: Differentiated the function before simplifying the final value.\nLine 4: Wrote conservation of energy with units."
-  );
+  const [answerText, setAnswerText] = useState("");
   const [markingCriteria, setMarkingCriteria] = useState(criteriaText);
   const [omrKeyText, setOmrKeyText] = useState(answerKey.join(" "));
-  const [omrResponseText, setOmrResponseText] = useState("A B C D B A C D A B");
+  const [omrResponseText, setOmrResponseText] = useState("");
 
   // File uploads
   const [answerFiles, setAnswerFiles] = useState<UploadedFile[]>([]);
@@ -97,21 +94,21 @@ export default function EvaluatePage() {
   // Initialize scores locally using form details
   const [result, setResult] = useState<EvaluationResult>(() => {
     const defaultStudent: Student = {
-      name: "Aarav Sharma",
-      roll: "JEE-2026-014",
+      name: "",
+      roll: "",
       stream: "JEE",
-      subject: "Physics + Maths",
-      answerText: "Line 1: Used lens formula and sign convention for ray optics.\nLine 2: Substituted focal length and image distance, but one negative sign is missed.\nLine 3: Differentiated the function before simplifying the final value.\nLine 4: Wrote conservation of energy with units.",
-      omr: ["A", "B", "C", "D", "B", "A", "C", "D", "A", "B"],
-      batch: "Super-30",
-      section: "A",
-      examType: "Mains Mock",
+      subject: "",
+      answerText: "",
+      omr: [],
+      batch: "",
+      section: "",
+      examType: "",
     };
     return evaluateLocally(defaultStudent);
   });
 
   const [omrResult, setOmrResult] = useState<CustomOmrResult>(() =>
-    evaluateCustomOmr("A B C D B A C D A B", "A B C D B A C D A B")
+    evaluateCustomOmr("A B C D B A C D A B", "")
   );
 
   // Fetch History Log
@@ -151,37 +148,7 @@ export default function EvaluatePage() {
     );
   }, [workspace]);
 
-  // Demo prefill handler
-  const handlePrefill = (roll: string) => {
-    const s = students.find((x) => x.roll === roll);
-    if (s) {
-      setStudentName(s.name);
-      setRollNumber(s.roll);
-      setBatch(s.batch || "Super-30");
-      setSection(s.section || "A");
-      setSubject(s.subject);
-      setStream(s.stream);
-      setExamType(s.examType || "Mains Mock");
-      setAnswerText(s.answerText);
-      setOmrResponseText(s.omr.join(" "));
 
-      const currentStudent: Student = {
-        name: s.name,
-        roll: s.roll,
-        stream: s.stream,
-        subject: s.subject,
-        answerText: s.answerText,
-        omr: s.omr,
-        batch: s.batch || "Super-30",
-        section: s.section || "A",
-        examType: s.examType || "Mains Mock",
-      };
-
-      setResult(evaluateLocally(currentStudent));
-      setOmrResult(evaluateCustomOmr(omrKeyText, s.omr.join(" ")));
-      setStatusNote(`Prefilled form details for ${s.name}. Click evaluate below to run AI check.`);
-    }
-  };
 
   // Run descriptive answer evaluation
   const runDescriptive = async () => {
@@ -490,41 +457,6 @@ export default function EvaluatePage() {
                 <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: 16 }}>
                   Define the student parameters below. Evaluation records and score mappings will bind to these settings.
                 </p>
-
-                {/* Prefill helper */}
-                <div className="form-group" style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent)" }}>Quick Load Demo Student</label>
-                  <select
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handlePrefill(e.target.value);
-                      }
-                    }}
-                    defaultValue=""
-                    className="form-group select"
-                    style={{
-                      padding: "10px 14px",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-sm)",
-                      fontSize: "0.85rem",
-                      background: "var(--bg-primary)",
-                      color: "var(--text-primary)",
-                      cursor: "pointer",
-                      outline: "none",
-                      marginTop: 4,
-                      width: "100%"
-                    }}
-                  >
-                    <option value="" disabled>-- Select a demo student --</option>
-                    {students.map((s) => (
-                      <option key={s.roll} value={s.roll}>
-                        {s.name} ({s.stream})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "14px 0" }} />
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div className="form-group">
