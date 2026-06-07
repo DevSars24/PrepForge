@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Navbar from "@/components/Navbar";
 import {
   FileText,
@@ -17,14 +17,15 @@ import {
 } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { motion, AnimatePresence } from "framer-motion";
+import { TextPlugin } from "gsap/TextPlugin";
+import { AnimatePresence, motion } from "framer-motion";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, TextPlugin);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DATA FOR SECTIONS
+// DATA
 // ─────────────────────────────────────────────────────────────────────────────
 
 const featuresList = [
@@ -83,17 +84,20 @@ const stepsList = [
 
 const testimonialsList = [
   {
-    quote: "PrepForge reduced our weekly descriptive grading cycle from three days of manual work to under twenty minutes. The step-wise citation system makes it easy for us to verify every single marked answer.",
+    quote:
+      "PrepForge reduced our weekly descriptive grading cycle from three days of manual work to under twenty minutes. The step-wise citation system makes it easy for us to verify every single marked answer.",
     author: "Dr. Ramesh Iyer",
     role: "Senior Physics Faculty, FIITJEE",
   },
   {
-    quote: "Our institute processed thousands of OMR bubble sheets last month. The anomaly detection is incredibly accurate, automatically highlighting faint shading errors that standard scanners completely missed.",
+    quote:
+      "Our institute processed thousands of OMR bubble sheets last month. The anomaly detection is incredibly accurate, automatically highlighting faint shading errors that standard scanners completely missed.",
     author: "Prof. Anjali Sen",
     role: "HOD Chemistry, Allen Career Institute",
   },
   {
-    quote: "Finally, an AI grading system that doesn't just output a single arbitrary number. PrepForge provides clear, NCERT-aligned explanations for every deduction, which helps our students target exactly what to revise.",
+    quote:
+      "Finally, an AI grading system that doesn't just output a single arbitrary number. PrepForge provides clear, NCERT-aligned explanations for every deduction, which helps our students target exactly what to revise.",
     author: "Maths & Science Coordinator",
     role: "Sri Chaitanya Academy",
   },
@@ -118,10 +122,44 @@ const faqsList = [
   },
 ];
 
-function AccordionItem({ question, answer }: { question: string; answer: string }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// ACCORDION
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AccordionItem({
+  question,
+  answer,
+  index,
+}: {
+  question: string;
+  answer: string;
+  index: number;
+}) {
   const [isOpen, setIsOpen] = useState(false);
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!itemRef.current) return;
+    gsap.fromTo(
+      itemRef.current,
+      { opacity: 0, x: -16 },
+      {
+        opacity: 1,
+        x: 0,
+        duration: 0.55,
+        ease: "power2.out",
+        delay: index * 0.08,
+        scrollTrigger: {
+          trigger: itemRef.current,
+          start: "top bottom-=60",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, [index]);
+
   return (
-    <div className="border-b border-slate-100 py-6 last:border-0">
+    <div ref={itemRef} className="border-b border-slate-100 py-6 last:border-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex justify-between items-center text-left font-semibold text-[#0F172A] hover:text-[#7C3AED] transition-colors cursor-pointer group"
@@ -142,7 +180,7 @@ function AccordionItem({ question, answer }: { question: string; answer: string 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden"
           >
             <p className="text-sm md:text-base text-slate-600 mt-3 leading-relaxed">
@@ -155,70 +193,426 @@ function AccordionItem({ question, answer }: { question: string; answer: string 
   );
 }
 
-export default function CleanPremiumLanding() {
+// ─────────────────────────────────────────────────────────────────────────────
+// COUNT-UP HOOK
+// ─────────────────────────────────────────────────────────────────────────────
+
+function useCountUp(
+  target: number,
+  duration = 1.8,
+  suffix = "",
+  prefix = "",
+  decimals = 0
+) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const hasRun = useRef(false);
+
   useEffect(() => {
-    // Elegant fade-in reveals for page sections using GSAP
-    const sections = document.querySelectorAll(".reveal-section");
-    sections.forEach((sec) => {
+    if (!ref.current) return;
+    const el = ref.current;
+    const trigger = ScrollTrigger.create({
+      trigger: el,
+      start: "top bottom-=60",
+      onEnter: () => {
+        if (hasRun.current) return;
+        hasRun.current = true;
+        const obj = { val: 0 };
+        gsap.to(obj, {
+          val: target,
+          duration,
+          ease: "power2.out",
+          onUpdate: () => {
+            el.textContent =
+              prefix +
+              obj.val.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",") +
+              suffix;
+          },
+        });
+      },
+    });
+    return () => trigger.kill();
+  }, [target, duration, suffix, prefix, decimals]);
+
+  return ref;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STAT ITEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StatItem({
+  target,
+  suffix,
+  prefix,
+  decimals,
+  label,
+  sub,
+  bordered,
+}: {
+  target: number;
+  suffix?: string;
+  prefix?: string;
+  decimals?: number;
+  label: string;
+  sub: string;
+  bordered?: boolean;
+}) {
+  const numRef = useCountUp(target, 1.8, suffix ?? "", prefix ?? "", decimals ?? 0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    gsap.fromTo(
+      wrapRef.current,
+      { opacity: 0, y: 28 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.7,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: wrapRef.current,
+          start: "top bottom-=60",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, []);
+
+  return (
+    <div
+      ref={wrapRef}
+      className={`p-6 text-center ${
+        bordered
+          ? "border-y md:border-y-0 md:border-x border-slate-200"
+          : ""
+      }`}
+    >
+      <p
+        ref={numRef}
+        className="text-5xl md:text-6xl font-black text-[#0F172A] mb-2 tracking-tight tabular-nums"
+      >
+        0
+      </p>
+      <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        {label}
+      </h4>
+      <p className="text-xs text-slate-400 max-w-[200px] mx-auto">{sub}</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function CleanPremiumLanding() {
+  const heroRef = useRef<HTMLElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
+  const h1Ref = useRef<HTMLHeadingElement>(null);
+  const subRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const featuresGridRef = useRef<HTMLDivElement>(null);
+  const beforeAfterRef = useRef<HTMLDivElement>(null);
+  const stepsGridRef = useRef<HTMLDivElement>(null);
+  const testimonialsGridRef = useRef<HTMLDivElement>(null);
+  const pricingGridRef = useRef<HTMLDivElement>(null);
+
+  // ── Hero entrance animations
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+      // Badge pop-in
+      tl.fromTo(
+        badgeRef.current,
+        { opacity: 0, y: -12, scale: 0.92 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.55 }
+      );
+
+      // H1 word-by-word split
+      if (h1Ref.current) {
+        const words = h1Ref.current.querySelectorAll(".hero-word");
+        tl.fromTo(
+          words,
+          { opacity: 0, y: 20, rotateX: -18 },
+          {
+            opacity: 1,
+            y: 0,
+            rotateX: 0,
+            duration: 0.55,
+            stagger: 0.055,
+            ease: "power2.out",
+          },
+          "-=0.2"
+        );
+      }
+
+      // Subtext slide
+      tl.fromTo(
+        subRef.current,
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.55 },
+        "-=0.25"
+      );
+
+      // CTA buttons
+      tl.fromTo(
+        ctaRef.current,
+        { opacity: 0, y: 14, scale: 0.97 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.5 },
+        "-=0.2"
+      );
+    }, heroRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  // ── Features cards stagger
+  useEffect(() => {
+    if (!featuresGridRef.current) return;
+    const cards = featuresGridRef.current.querySelectorAll(".feat-card");
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 40, scale: 0.97 },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.65,
+        stagger: 0.12,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: featuresGridRef.current,
+          start: "top bottom-=80",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, []);
+
+  // ── Before/After cards
+  useEffect(() => {
+    if (!beforeAfterRef.current) return;
+    const cards = beforeAfterRef.current.querySelectorAll(".ba-card");
+    gsap.fromTo(
+      cards,
+      { opacity: 0, x: (i) => (i === 0 ? -36 : 36) },
+      {
+        opacity: 1,
+        x: 0,
+        duration: 0.7,
+        stagger: 0.15,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: beforeAfterRef.current,
+          start: "top bottom-=80",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, []);
+
+  // ── Steps cards
+  useEffect(() => {
+    if (!stepsGridRef.current) return;
+    const cards = stepsGridRef.current.querySelectorAll(".step-card");
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 32 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: stepsGridRef.current,
+          start: "top bottom-=60",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, []);
+
+  // ── Testimonials stagger
+  useEffect(() => {
+    if (!testimonialsGridRef.current) return;
+    const cards =
+      testimonialsGridRef.current.querySelectorAll(".testi-card");
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 36, scale: 0.96 },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.65,
+        stagger: 0.13,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: testimonialsGridRef.current,
+          start: "top bottom-=60",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, []);
+
+  // ── Pricing cards stagger
+  useEffect(() => {
+    if (!pricingGridRef.current) return;
+    const cards = pricingGridRef.current.querySelectorAll(".price-card");
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 44, scale: 0.95 },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.7,
+        stagger: 0.11,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: pricingGridRef.current,
+          start: "top bottom-=60",
+          toggleActions: "play none none none",
+        },
+      }
+    );
+  }, []);
+
+  // ── Section headings reveal
+  useEffect(() => {
+    const headings = document.querySelectorAll(".section-heading");
+    headings.forEach((el) => {
       gsap.fromTo(
-        sec,
-        { opacity: 0, y: 24 },
+        el,
+        { opacity: 0, y: 22 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.8,
+          duration: 0.6,
           ease: "power2.out",
           scrollTrigger: {
-            trigger: sec,
-            start: "top bottom-=80",
+            trigger: el,
+            start: "top bottom-=60",
             toggleActions: "play none none none",
           },
         }
       );
     });
+
+    // Subtle parallax on bg-slate sections
+    const parallaxSections = document.querySelectorAll(".parallax-bg");
+    parallaxSections.forEach((el) => {
+      gsap.to(el, {
+        backgroundPositionY: "30%",
+        ease: "none",
+        scrollTrigger: {
+          trigger: el,
+          start: "top bottom",
+          end: "bottom top",
+          scrub: true,
+        },
+      });
+    });
   }, []);
 
+  // Hero headline words
+  const heroWords =
+    "AI-powered answer sheet grading and OMR evaluation for educators.".split(
+      " "
+    );
+
   return (
-    <div className="bg-white text-slate-900 min-h-screen font-sans selection:bg-[#7C3AED]/10 selection:text-[#7C3AED]">
+    <div className="bg-white text-slate-900 min-h-screen font-sans selection:bg-[#7C3AED]/10 selection:text-[#7C3AED] overflow-x-hidden">
       <Navbar />
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          1. HERO SECTION
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "144px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full animate-fade-in"
+      {/* ─────────────────────────────────────────────────────────────────────
+          1. HERO
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        ref={heroRef}
+        style={{
+          paddingTop: "144px",
+          paddingBottom: "96px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full"
       >
+        {/* Ambient glow blobs */}
+        <div
+          className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(124,58,237,0.05) 0%, transparent 70%)",
+          }}
+        />
+
         <div className="max-w-4xl z-10 flex flex-col items-center w-full">
-          {/* Subtle Accent Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-slate-100 bg-slate-50 text-[#7C3AED] text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm">
+          {/* Badge */}
+          <div
+            ref={badgeRef}
+            style={{ opacity: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-slate-100 bg-slate-50 text-[#7C3AED] text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm"
+          >
             <Sparkles size={13} className="text-[#7C3AED]" />
             AI Evaluation Console
           </div>
 
-          {/* Premium Clean Headline */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0F172A] leading-[1.2] mb-6 max-w-3xl w-full">
-            AI-powered answer sheet grading and OMR evaluation for educators.
+          {/* Word-by-word H1 */}
+          <h1
+            ref={h1Ref}
+            className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0F172A] leading-[1.2] mb-6 max-w-3xl w-full"
+            style={{ perspective: "600px" }}
+          >
+            {heroWords.map((word, i) => (
+              <span
+                key={i}
+                className="hero-word inline-block mr-[0.25em] last:mr-0"
+                style={{ opacity: 0, display: "inline-block" }}
+              >
+                {word}
+              </span>
+            ))}
           </h1>
 
-          {/* Clear Slate Subtext */}
-          <p className="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed mb-10 w-full">
-            Streamline step-by-step descriptive exam marking and bubble-sheet verification. 
-            Grade handwriting with citation audits, map conceptual syllabus gaps, and reclaim valuable prep hours.
+          {/* Subtext */}
+          <p
+            ref={subRef}
+            style={{ opacity: 0 }}
+            className="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed mb-10 w-full"
+          >
+            Streamline step-by-step descriptive exam marking and bubble-sheet
+            verification. Grade handwriting with citation audits, map conceptual
+            syllabus gaps, and reclaim valuable prep hours.
           </p>
 
-          {/* Clean Accent-Colored CTA Button */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full">
+          {/* CTA Buttons */}
+          <div
+            ref={ctaRef}
+            style={{ opacity: 0 }}
+            className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full"
+          >
             <Link
               href="/evaluate"
-              className="px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-base shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:shadow-[0_6px_20px_rgba(124,58,237,0.35)] transition-all flex items-center gap-2 group cursor-pointer hover:scale-[1.01]"
+              className="group relative px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-base shadow-[0_4px_14px_rgba(124,58,237,0.28)] hover:shadow-[0_8px_28px_rgba(124,58,237,0.4)] transition-all flex items-center gap-2 overflow-hidden cursor-pointer"
+              style={{ transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)" }}
             >
-              Open Faculty Console
-              <ArrowRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
+              <span className="relative z-10">Open Faculty Console</span>
+              <ArrowRight
+                size={18}
+                className="relative z-10 transform group-hover:translate-x-1 transition-transform duration-200"
+              />
+              {/* shimmer */}
+              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-500 ease-in-out bg-gradient-to-r from-transparent via-white/15 to-transparent" />
             </Link>
             <Link
               href="#features"
-              className="px-8 py-4 bg-white border border-slate-200 hover:border-slate-350 text-slate-700 hover:text-slate-900 rounded-xl font-bold text-base shadow-sm transition-all cursor-pointer hover:scale-[1.01]"
+              className="px-8 py-4 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-xl font-bold text-base shadow-sm transition-all cursor-pointer hover:-translate-y-0.5"
+              style={{ transition: "all 0.2s ease" }}
             >
               Explore Features
             </Link>
@@ -226,29 +620,64 @@ export default function CleanPremiumLanding() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          2. FEATURES SECTION (Clean Equal-Height Grid)
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="reveal-section max-w-7xl mx-auto border-t border-slate-100 bg-white w-full" 
+      {/* ─────────────────────────────────────────────────────────────────────
+          2. FEATURES
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: "96px",
+          paddingBottom: "96px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="max-w-7xl mx-auto border-t border-slate-100 bg-white w-full"
         id="features"
       >
-        <div className="text-center max-w-2xl mx-auto mb-16 w-full">
-          <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Capabilities</h2>
+        <div className="section-heading text-center max-w-2xl mx-auto mb-16 w-full" style={{ opacity: 0 }}>
+          <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">
+            Capabilities
+          </h2>
           <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
             High-Precision Grading Features
           </h3>
           <p className="text-slate-600 mt-2">
-            Automate routine validation tasks while maintaining full grading accuracy and transparency.
+            Automate routine validation tasks while maintaining full grading
+            accuracy and transparency.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+        <div
+          ref={featuresGridRef}
+          className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full"
+        >
           {featuresList.map((feat, idx) => (
             <div
               key={idx}
-              className="border border-slate-200/80 rounded-2xl p-8 md:p-10 hover:border-slate-350 transition-all duration-205 flex flex-col justify-between bg-white shadow-[0_4px_20px_rgba(15,23,42,0.02)]"
+              className="feat-card group border border-slate-200/80 rounded-2xl p-8 md:p-10 flex flex-col justify-between bg-white shadow-[0_4px_20px_rgba(15,23,42,0.02)] cursor-pointer"
+              style={{
+                opacity: 0,
+                transition:
+                  "border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1)",
+              }}
+              onMouseEnter={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: -5,
+                  boxShadow:
+                    feat.accent === "orange"
+                      ? "0 16px 40px rgba(249,115,22,0.1)"
+                      : "0 16px 40px rgba(124,58,237,0.1)",
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              }}
+              onMouseLeave={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: 0,
+                  boxShadow: "0 4px 20px rgba(15,23,42,0.02)",
+                  duration: 0.35,
+                  ease: "power2.out",
+                });
+              }}
             >
               <div>
                 <div className="mb-6">
@@ -262,11 +691,15 @@ export default function CleanPremiumLanding() {
                     {feat.badge}
                   </span>
                 </div>
-                <h4 className="text-2xl font-bold text-[#0F172A] mb-4">{feat.title}</h4>
-                <p className="text-slate-600 text-sm md:text-base leading-relaxed">{feat.desc}</p>
+                <h4 className="text-2xl font-bold text-[#0F172A] mb-4">
+                  {feat.title}
+                </h4>
+                <p className="text-slate-600 text-sm md:text-base leading-relaxed">
+                  {feat.desc}
+                </p>
               </div>
               <div className="mt-8 flex justify-between items-center pt-6 border-t border-slate-100 w-full">
-                <div className="p-3 rounded-xl bg-slate-50">
+                <div className="p-3 rounded-xl bg-slate-50 group-hover:scale-110 transition-transform duration-300">
                   {feat.icon}
                 </div>
                 <Link
@@ -277,7 +710,11 @@ export default function CleanPremiumLanding() {
                       : "text-[#7C3AED] hover:text-[#6D28D9]"
                   }`}
                 >
-                  Try Now <ArrowRight size={14} />
+                  Try Now{" "}
+                  <ArrowRight
+                    size={14}
+                    className="group-hover:translate-x-1 transition-transform duration-200"
+                  />
                 </Link>
               </div>
             </div>
@@ -285,95 +722,141 @@ export default function CleanPremiumLanding() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          3. BEFORE / AFTER SECTION
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="reveal-section bg-slate-50/50 border-t border-b border-slate-100 w-full"
+      {/* ─────────────────────────────────────────────────────────────────────
+          3. BEFORE / AFTER
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: "96px",
+          paddingBottom: "96px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="bg-slate-50/60 border-t border-b border-slate-100 w-full"
       >
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
-            <h2 className="text-xs font-bold text-[#F97316] uppercase tracking-widest mb-3">Contrast</h2>
+          <div
+            className="section-heading text-center max-w-2xl mx-auto mb-16 w-full"
+            style={{ opacity: 0 }}
+          >
+            <h2 className="text-xs font-bold text-[#F97316] uppercase tracking-widest mb-3">
+              Contrast
+            </h2>
             <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
               A Smarter Grading Workflow
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full">
-            {/* The Pain (Manual Paper Grading) */}
-            <div className="bg-white border border-slate-200/80 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_20px_rgba(15,23,42,0.02)]">
+          <div
+            ref={beforeAfterRef}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full"
+          >
+            {/* Pain */}
+            <div
+              className="ba-card bg-white border border-slate-200/80 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_20px_rgba(15,23,42,0.02)]"
+              style={{ opacity: 0 }}
+            >
               <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#F97316]" />
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-50 text-[#F97316] mb-6">
                   Manual Grading Process
                 </div>
-                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">Stack & Pen Verification</h4>
-                
+                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">
+                  Stack &amp; Pen Verification
+                </h4>
                 <ul className="space-y-6">
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✗</span>
-                    <div>
-                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Inconsistent step marking</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1">Applying grading rules uniformly over hours of late-night grading is prone to fatigue errors.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✗</span>
-                    <div>
-                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">OMR audit oversights</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1">Faint bubbles, erase marks, and multiple selections trigger zero warnings and get miscounted by baseline scanners.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✗</span>
-                    <div>
-                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Missing concept analysis</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1">Students only see raw numeric scores. Teachers get no structured reports on syllabus topics requiring attention.</p>
-                    </div>
-                  </li>
+                  {[
+                    {
+                      title: "Inconsistent step marking",
+                      desc: "Applying grading rules uniformly over hours of late-night grading is prone to fatigue errors.",
+                    },
+                    {
+                      title: "OMR audit oversights",
+                      desc: "Faint bubbles, erase marks, and multiple selections trigger zero warnings and get miscounted by baseline scanners.",
+                    },
+                    {
+                      title: "Missing concept analysis",
+                      desc: "Students only see raw numeric scores. Teachers get no structured reports on syllabus topics requiring attention.",
+                    },
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-full bg-orange-50 text-[#F97316] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                        ✗
+                      </span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A] text-sm md:text-base">
+                          {item.title}
+                        </p>
+                        <p className="text-xs md:text-sm text-slate-600 mt-1">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               </div>
-              <p className="text-xs text-slate-400 mt-10 border-t border-slate-100 pt-4">Manual speed average: 12-15 answer sheets per hour.</p>
+              <p className="text-xs text-slate-400 mt-10 border-t border-slate-100 pt-4">
+                Manual speed average: 12-15 answer sheets per hour.
+              </p>
             </div>
 
-            {/* The Solution (PrepForge AI Grading) */}
-            <div className="bg-white border border-slate-300 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_25px_rgba(15,23,42,0.03)] ring-2 ring-[#7C3AED]/10">
+            {/* Solution */}
+            <div
+              className="ba-card bg-white border border-slate-300 p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-[0_4px_25px_rgba(15,23,42,0.03)] ring-2 ring-[#7C3AED]/10"
+              style={{ opacity: 0 }}
+            >
               <div className="absolute top-0 left-0 right-0 h-[4px] bg-[#7C3AED]" />
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-[#7C3AED] mb-6">
                   PrepForge Console
                 </div>
-                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">AI-Powered Evaluation Suite</h4>
-                
+                <h4 className="text-2xl font-bold text-[#0F172A] mb-6">
+                  AI-Powered Evaluation Suite
+                </h4>
                 <ul className="space-y-6">
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
-                    <div>
-                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Step-wise evidence matching</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1">Every mark awarded is linked to specific lines on the student's sheet and mapped directly to your custom rubric guidelines.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
-                    <div>
-                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Visual bubble audits</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1">AI models detect faint shading patterns and double-bubbled selections, flagging them for rapid faculty confirmation.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">✓</span>
-                    <div>
-                      <p className="font-semibold text-[#0F172A] text-sm md:text-base">Instant concept gap tracking</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1">Generates real-time, topic-wise analysis dashboards charting cohorts' structural gaps with NCERT revision tips.</p>
-                    </div>
-                  </li>
+                  {[
+                    {
+                      title: "Step-wise evidence matching",
+                      desc: "Every mark awarded is linked to specific lines on the student's sheet and mapped directly to your custom rubric guidelines.",
+                    },
+                    {
+                      title: "Visual bubble audits",
+                      desc: "AI models detect faint shading patterns and double-bubbled selections, flagging them for rapid faculty confirmation.",
+                    },
+                    {
+                      title: "Instant concept gap tracking",
+                      desc: "Generates real-time, topic-wise analysis dashboards charting cohorts' structural gaps with NCERT revision tips.",
+                    },
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-full bg-purple-50 text-[#7C3AED] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                        ✓
+                      </span>
+                      <div>
+                        <p className="font-semibold text-[#0F172A] text-sm md:text-base">
+                          {item.title}
+                        </p>
+                        <p className="text-xs md:text-sm text-slate-600 mt-1">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               </div>
               <div className="mt-10 pt-4 border-t border-slate-100 flex items-center justify-between w-full">
-                <p className="text-xs text-slate-400">Processing speed average: 180 documents per minute.</p>
-                <Link href="/evaluate" className="text-sm font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer">
-                  Launch Console <ArrowRight size={14} className="ml-0.5" />
+                <p className="text-xs text-slate-400">
+                  Processing speed average: 180 documents per minute.
+                </p>
+                <Link
+                  href="/evaluate"
+                  className="text-sm font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer group"
+                >
+                  Launch Console{" "}
+                  <ArrowRight
+                    size={14}
+                    className="ml-0.5 group-hover:translate-x-1 transition-transform duration-200"
+                  />
                 </Link>
               </div>
             </div>
@@ -381,34 +864,71 @@ export default function CleanPremiumLanding() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          4. HOW IT WORKS SECTION (Simple, Stackable Steps)
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="reveal-section bg-white w-full" 
+      {/* ─────────────────────────────────────────────────────────────────────
+          4. HOW IT WORKS
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: "96px",
+          paddingBottom: "96px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="bg-white w-full"
         id="workflow"
       >
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
-            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Workflow</h2>
+          <div
+            className="section-heading text-center max-w-2xl mx-auto mb-16 w-full"
+            style={{ opacity: 0 }}
+          >
+            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">
+              Workflow
+            </h2>
             <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
               Minimalist 4-Step Process
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
+          <div
+            ref={stepsGridRef}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full"
+          >
             {stepsList.map((step, idx) => (
               <div
                 key={idx}
-                className="bg-white border border-slate-200 p-8 rounded-2xl flex flex-col justify-between transition-all duration-200 hover:border-slate-350 shadow-[0_4px_20px_rgba(15,23,42,0.01)]"
+                className="step-card group bg-white border border-slate-200 p-8 rounded-2xl flex flex-col justify-between"
+                style={{
+                  opacity: 0,
+                  transition: "border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease",
+                }}
+                onMouseEnter={(e) => {
+                  gsap.to(e.currentTarget, {
+                    y: -4,
+                    boxShadow: "0 12px 32px rgba(124,58,237,0.08)",
+                    duration: 0.28,
+                    ease: "power2.out",
+                  });
+                }}
+                onMouseLeave={(e) => {
+                  gsap.to(e.currentTarget, {
+                    y: 0,
+                    boxShadow: "none",
+                    duration: 0.3,
+                    ease: "power2.out",
+                  });
+                }}
               >
                 <div>
-                  <span className="text-4xl font-black text-slate-100 tracking-tight block mb-4">
+                  <span className="text-5xl font-black text-slate-100 tracking-tight block mb-4 group-hover:text-[#7C3AED]/10 transition-colors duration-300">
                     {step.num}
                   </span>
-                  <h4 className="text-lg font-bold text-[#0F172A] mb-2">{step.title}</h4>
-                  <p className="text-sm text-slate-600 leading-relaxed">{step.desc}</p>
+                  <h4 className="text-lg font-bold text-[#0F172A] mb-2">
+                    {step.title}
+                  </h4>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    {step.desc}
+                  </p>
                 </div>
               </div>
             ))}
@@ -416,70 +936,112 @@ export default function CleanPremiumLanding() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          5. STATISTICS SECTION
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "80px", paddingBottom: "80px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="reveal-section bg-slate-50/50 border-t border-b border-slate-100 w-full"
+      {/* ─────────────────────────────────────────────────────────────────────
+          5. STATISTICS — count-up
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: "80px",
+          paddingBottom: "80px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="bg-slate-50/60 border-t border-b border-slate-100 w-full"
       >
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center w-full">
-            <div className="p-4">
-              <p className="text-4xl md:text-5xl font-black text-[#0F172A] mb-2 tracking-tight">
-                99.2%
-              </p>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Grading Accuracy</h4>
-              <p className="text-xs text-slate-400 mt-2 max-w-[200px] mx-auto">Verified against rigorous standard test keys.</p>
-            </div>
-            <div className="p-4 border-y md:border-y-0 md:border-x border-slate-200">
-              <p className="text-4xl md:text-5xl font-black text-[#0F172A] mb-2 tracking-tight">
-                150,000+
-              </p>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Sheets Checked</h4>
-              <p className="text-xs text-slate-400 mt-2 max-w-[200px] mx-auto">Active papers processed by faculty platforms.</p>
-            </div>
-            <div className="p-4">
-              <p className="text-4xl md:text-5xl font-black text-[#0F172A] mb-2 tracking-tight">
-                85%
-              </p>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Time Saved</h4>
-              <p className="text-xs text-slate-400 mt-2 max-w-[200px] mx-auto">Valuable prep hours redirected back to students.</p>
-            </div>
+            <StatItem
+              target={99.2}
+              suffix="%"
+              decimals={1}
+              label="Grading Accuracy"
+              sub="Verified against rigorous standard test keys."
+            />
+            <StatItem
+              target={150000}
+              suffix="+"
+              label="Sheets Checked"
+              sub="Active papers processed by faculty platforms."
+              bordered
+            />
+            <StatItem
+              target={85}
+              suffix="%"
+              label="Time Saved"
+              sub="Valuable prep hours redirected back to students."
+            />
           </div>
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          6. TESTIMONIALS SECTION (Static Grid, Clean Text Wrapping)
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="reveal-section bg-white w-full" 
+      {/* ─────────────────────────────────────────────────────────────────────
+          6. TESTIMONIALS
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: "96px",
+          paddingBottom: "96px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="bg-white w-full"
         id="testimonials"
       >
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-16 w-full">
-            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Feedback</h2>
+          <div
+            className="section-heading text-center max-w-2xl mx-auto mb-16 w-full"
+            style={{ opacity: 0 }}
+          >
+            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">
+              Feedback
+            </h2>
             <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
               Trusted by Faculty
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+          <div
+            ref={testimonialsGridRef}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full"
+          >
             {testimonialsList.map((t, i) => (
               <div
                 key={i}
-                className="border border-slate-200/80 p-8 md:p-10 rounded-2xl bg-white shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] flex flex-col justify-between hover:border-slate-350 transition-colors"
+                className="testi-card group border border-slate-200/80 p-8 md:p-10 rounded-2xl bg-white shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] flex flex-col justify-between cursor-default"
+                style={{
+                  opacity: 0,
+                  transition: "border-color 0.25s ease, box-shadow 0.25s ease, transform 0.3s ease",
+                }}
+                onMouseEnter={(e) => {
+                  gsap.to(e.currentTarget, {
+                    y: -5,
+                    boxShadow: "0 16px 40px rgba(124,58,237,0.08)",
+                    duration: 0.3,
+                    ease: "power2.out",
+                  });
+                }}
+                onMouseLeave={(e) => {
+                  gsap.to(e.currentTarget, {
+                    y: 0,
+                    boxShadow: "0 4px 25px -5px rgba(15,23,42,0.03)",
+                    duration: 0.35,
+                    ease: "power2.out",
+                  });
+                }}
               >
                 <div>
-                  <Quote size={28} className="text-[#7C3AED]/10 mb-6" />
+                  <Quote
+                    size={28}
+                    className="text-[#7C3AED]/10 mb-6 group-hover:text-[#7C3AED]/20 transition-colors duration-300"
+                  />
                   <p className="text-slate-600 text-sm md:text-base leading-relaxed italic mb-8 whitespace-normal">
                     &ldquo;{t.quote}&rdquo;
                   </p>
                 </div>
                 <div className="pt-6 border-t border-slate-100 w-full mt-4">
-                  <h5 className="font-bold text-[#0F172A] text-sm md:text-base">{t.author}</h5>
+                  <h5 className="font-bold text-[#0F172A] text-sm md:text-base">
+                    {t.author}
+                  </h5>
                   <p className="text-xs text-slate-400 mt-1">{t.role}</p>
                 </div>
               </div>
@@ -488,148 +1050,305 @@ export default function CleanPremiumLanding() {
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          7. PRICING SECTION
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="reveal-section bg-slate-50/50 border-t border-b border-slate-100 w-full" 
+      {/* ─────────────────────────────────────────────────────────────────────
+          7. PRICING — enlarged cards
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: "112px",
+          paddingBottom: "112px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="bg-slate-50/60 border-t border-b border-slate-100 w-full"
         id="pricing"
       >
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center max-w-2xl mx-auto mb-20 w-full">
-            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">Pricing</h2>
-            <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
+          <div
+            className="section-heading text-center max-w-2xl mx-auto mb-20 w-full"
+            style={{ opacity: 0 }}
+          >
+            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-4">
+              Pricing
+            </h2>
+            <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight mb-4">
               Transparent Institutional Plans
             </h3>
+            <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+              Honest, predictable tiers scaling from individual classrooms up to
+              full-scale engineering campuses.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto w-full">
-            {/* Basic Plan */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-8 md:p-10 flex flex-col justify-between shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] hover:border-slate-350 transition-all duration-200">
+          {/* Enlarged pricing grid — larger cards */}
+          <div
+            ref={pricingGridRef}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto w-full items-stretch"
+          >
+            {/* Free Sandbox */}
+            <div
+              className="price-card group bg-white border border-slate-200/60 rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
+              style={{
+                opacity: 0,
+                minHeight: "480px",
+                transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
+              }}
+              onMouseEnter={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: -7,
+                  boxShadow: "0 20px 48px rgba(15,23,42,0.06)",
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              }}
+              onMouseLeave={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: 0,
+                  boxShadow: "0 2px 20px -3px rgba(15,23,42,0.03)",
+                  duration: 0.35,
+                  ease: "power2.out",
+                });
+              }}
+            >
               <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Starter Portal</h4>
-                <div className="flex items-baseline gap-1 mb-8">
-                  <span className="text-5xl font-black text-[#0F172A] tracking-tight">$79</span>
-                  <span className="text-sm text-slate-400 font-semibold">/ month</span>
+                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5">
+                  Free Sandbox
+                </h4>
+                <div className="flex items-baseline gap-1 mb-7">
+                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    $0
+                  </span>
+                  <span className="text-sm text-slate-400 font-semibold">
+                    / month
+                  </span>
                 </div>
                 <ul className="space-y-4 mb-10">
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>Process up to 100 descriptive papers/mo</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>Basic handwriting OCR mapping</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>Standard OMR checking (50 sheets/mo)</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>Basic gap analysis dashboard</span>
-                  </li>
+                  {[
+                    "10 descriptive sheets check/mo",
+                    "Standard OMR sheets (5/mo)",
+                    "Basic NCERT evidence grading",
+                    "7-day evaluation history",
+                  ].map((feat, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={16} className="text-slate-300 shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-4 px-8 rounded-xl text-base font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 transition-all block cursor-pointer hover:border-slate-300 shadow-sm"
+                className="w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
+              >
+                Start Sandbox
+              </Link>
+            </div>
+
+            {/* Starter */}
+            <div
+              className="price-card group bg-white border border-slate-200/60 rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
+              style={{
+                opacity: 0,
+                minHeight: "480px",
+                transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
+              }}
+              onMouseEnter={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: -7,
+                  boxShadow: "0 20px 48px rgba(249,115,22,0.08)",
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              }}
+              onMouseLeave={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: 0,
+                  boxShadow: "0 2px 20px -3px rgba(15,23,42,0.03)",
+                  duration: 0.35,
+                  ease: "power2.out",
+                });
+              }}
+            >
+              <div>
+                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5">
+                  Starter Portal
+                </h4>
+                <div className="flex items-baseline gap-1 mb-7">
+                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    $79
+                  </span>
+                  <span className="text-sm text-slate-400 font-semibold">
+                    / month
+                  </span>
+                </div>
+                <ul className="space-y-4 mb-10">
+                  {[
+                    "Process up to 100 papers/mo",
+                    "Basic handwriting OCR mapping",
+                    "Standard OMR checking (50 sheets/mo)",
+                    "Basic gap analysis dashboard",
+                  ].map((feat, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Link
+                href="/evaluate"
+                className="w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
                 Get Started
               </Link>
             </div>
 
-            {/* Pro Plan (Highlighted) */}
-            <div className="bg-white border-2 border-[#7C3AED] rounded-2xl p-8 md:p-10 flex flex-col justify-between shadow-[0_10px_35px_-10px_rgba(124,58,237,0.15)] relative hover:scale-[1.01] transition-all duration-200">
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#7C3AED] text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider z-20 shadow-sm">
+            {/* Pro (featured) */}
+            <div
+              className="price-card group bg-white border-2 border-[#7C3AED] rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_8px_40px_rgba(124,58,237,0.08)] relative cursor-pointer"
+              style={{
+                opacity: 0,
+                minHeight: "480px",
+                transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
+              }}
+              onMouseEnter={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: -7,
+                  boxShadow: "0 24px 56px rgba(124,58,237,0.18)",
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              }}
+              onMouseLeave={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: 0,
+                  boxShadow: "0 8px 40px rgba(124,58,237,0.08)",
+                  duration: 0.35,
+                  ease: "power2.out",
+                });
+              }}
+            >
+              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#7C3AED] text-white text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider z-20 shadow-sm">
                 MOST POPULAR
               </span>
               <div>
-                <h4 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-4">Pro Faculty</h4>
-                <div className="flex items-baseline gap-1 mb-8">
-                  <span className="text-5xl font-black text-[#0F172A] tracking-tight">$189</span>
-                  <span className="text-sm text-slate-400 font-semibold">/ month</span>
+                <h4 className="text-[11px] font-bold text-[#7C3AED] uppercase tracking-widest mb-5">
+                  Pro Faculty
+                </h4>
+                <div className="flex items-baseline gap-1 mb-7">
+                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    $189
+                  </span>
+                  <span className="text-sm text-slate-400 font-semibold">
+                    / month
+                  </span>
                 </div>
                 <ul className="space-y-4 mb-10">
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
-                    <span>Unlimited descriptive answer sheets</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
-                    <span>Chain-of-Thought AI grading logic</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
-                    <span>Unlimited OMR + anomaly auditing</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
-                    <span>Advanced cohort gap analytics</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#7C3AED] shrink-0 mt-0.5" />
-                    <span>HTML/PDF evaluation reports export</span>
-                  </li>
+                  {[
+                    "Unlimited descriptive answer sheets",
+                    "Chain-of-Thought AI grading logic",
+                    "Unlimited OMR + anomaly auditing",
+                    "Advanced cohort gap analytics",
+                    "HTML/PDF evaluation reports export",
+                  ].map((feat, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={16} className="text-[#7C3AED] shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-4 px-8 rounded-xl text-base font-bold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all block cursor-pointer shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:shadow-[0_6px_20px_rgba(124,58,237,0.35)] z-10"
+                className="group/btn relative w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all block cursor-pointer shadow-[0_4px_16px_rgba(124,58,237,0.25)] hover:shadow-[0_8px_24px_rgba(124,58,237,0.38)] overflow-hidden"
               >
-                Start Free Trial
+                <span className="relative z-10">Start Free Trial</span>
+                <span className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-500 ease-in-out bg-gradient-to-r from-transparent via-white/15 to-transparent" />
               </Link>
             </div>
 
-            {/* Enterprise Plan */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-8 md:p-10 flex flex-col justify-between shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] hover:border-slate-350 transition-all duration-200">
+            {/* Enterprise */}
+            <div
+              className="price-card group bg-white border border-slate-200/60 rounded-2xl p-8 lg:p-9 flex flex-col justify-between shadow-[0_2px_20px_-3px_rgba(15,23,42,0.03)] cursor-pointer"
+              style={{
+                opacity: 0,
+                minHeight: "480px",
+                transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
+              }}
+              onMouseEnter={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: -7,
+                  boxShadow: "0 20px 48px rgba(249,115,22,0.07)",
+                  duration: 0.3,
+                  ease: "power2.out",
+                });
+              }}
+              onMouseLeave={(e) => {
+                gsap.to(e.currentTarget, {
+                  y: 0,
+                  boxShadow: "0 2px 20px -3px rgba(15,23,42,0.03)",
+                  duration: 0.35,
+                  ease: "power2.out",
+                });
+              }}
+            >
               <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Enterprise System</h4>
-                <div className="flex items-baseline gap-1 mb-8">
-                  <span className="text-5xl font-black text-[#0F172A] tracking-tight">$449</span>
-                  <span className="text-sm text-slate-400 font-semibold">/ month</span>
+                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-5">
+                  Enterprise System
+                </h4>
+                <div className="flex items-baseline gap-1 mb-7">
+                  <span className="text-4xl font-extrabold text-[#0F172A] tracking-tight">
+                    $449
+                  </span>
+                  <span className="text-sm text-slate-400 font-semibold">
+                    / month
+                  </span>
                 </div>
                 <ul className="space-y-4 mb-10">
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>Institutional API integration layer</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>Unified billing for department profiles</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>SLA guaranteed uptime and support</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
-                    <CheckCircle2 size={18} className="text-[#F97316] shrink-0 mt-0.5" />
-                    <span>Dedicated account training & support</span>
-                  </li>
+                  {[
+                    "Institutional API integration layer",
+                    "Unified billing for department profiles",
+                    "SLA guaranteed uptime and support",
+                    "Dedicated account training & support",
+                  ].map((feat, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed">
+                      <CheckCircle2 size={16} className="text-[#F97316] shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
               <Link
                 href="/evaluate"
-                className="w-full text-center py-4 px-8 rounded-xl text-base font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 transition-all block cursor-pointer hover:border-slate-300 shadow-sm"
+                className="w-full text-center py-4 px-6 rounded-xl text-sm font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
-                Contact Institution Team
+                Contact Team
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          8. FAQ SECTION (Accordion list)
-          ─────────────────────────────────────────────────────────────────────── */}
-      <section 
-        style={{ paddingTop: "96px", paddingBottom: "96px", paddingLeft: "24px", paddingRight: "24px" }}
-        className="reveal-section max-w-4xl mx-auto bg-white w-full" 
+      {/* ─────────────────────────────────────────────────────────────────────
+          8. FAQ
+          ───────────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: "96px",
+          paddingBottom: "96px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
+        className="max-w-4xl mx-auto bg-white w-full"
         id="faq"
       >
-        <div className="text-center max-w-2xl mx-auto mb-16 w-full">
-          <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">FAQ</h2>
+        <div
+          className="section-heading text-center max-w-2xl mx-auto mb-16 w-full"
+          style={{ opacity: 0 }}
+        >
+          <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">
+            FAQ
+          </h2>
           <h3 className="text-3xl font-extrabold text-[#0F172A] tracking-tight">
             Frequently Asked Questions
           </h3>
@@ -637,62 +1356,95 @@ export default function CleanPremiumLanding() {
 
         <div className="divide-y divide-slate-100 w-full">
           {faqsList.map((faq, index) => (
-            <AccordionItem key={index} question={faq.q} answer={faq.a} />
+            <AccordionItem
+              key={index}
+              question={faq.q}
+              answer={faq.a}
+              index={index}
+            />
           ))}
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────────────────────────────
-          9. FOOTER SECTION
-          ─────────────────────────────────────────────────────────────────────── */}
-      <footer 
-        style={{ paddingTop: "64px", paddingBottom: "64px", paddingLeft: "24px", paddingRight: "24px" }}
+      {/* ─────────────────────────────────────────────────────────────────────
+          9. FOOTER
+          ───────────────────────────────────────────────────────────────────── */}
+      <footer
+        style={{
+          paddingTop: "64px",
+          paddingBottom: "64px",
+          paddingLeft: "24px",
+          paddingRight: "24px",
+        }}
         className="bg-white max-w-7xl mx-auto border-t border-slate-100 w-full"
       >
         <div className="flex flex-col md:flex-row justify-between items-start gap-8 pb-12 mb-8 w-full">
           <div>
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl text-[#0F172A] mb-3">
-              <span className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center text-white shadow-sm">
+            <Link
+              href="/"
+              className="flex items-center gap-2 font-bold text-xl text-[#0F172A] mb-3 group"
+            >
+              <span className="w-8 h-8 rounded-lg bg-[#7C3AED] flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform duration-200">
                 <BookOpen size={16} strokeWidth={2.5} />
               </span>
               Prep<span className="text-[#7C3AED]">Forge</span>
             </Link>
             <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
-              Automated high-precision answer verification and OMR auditing suite for JEE &amp; NEET institutes.
+              Automated high-precision answer verification and OMR auditing
+              suite for JEE &amp; NEET institutes.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-x-16 gap-y-6">
             <div>
-              <h5 className="text-xs font-bold text-[#0F172A] uppercase tracking-widest mb-4">Product</h5>
+              <h5 className="text-xs font-bold text-[#0F172A] uppercase tracking-widest mb-4">
+                Product
+              </h5>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/evaluate" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
+                  <Link
+                    href="/evaluate"
+                    className="text-slate-500 hover:text-[#7C3AED] transition-colors"
+                  >
                     Faculty Console
                   </Link>
                 </li>
                 <li>
-                  <Link href="#features" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
+                  <Link
+                    href="#features"
+                    className="text-slate-500 hover:text-[#7C3AED] transition-colors"
+                  >
                     Features
                   </Link>
                 </li>
                 <li>
-                  <Link href="#workflow" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
+                  <Link
+                    href="#workflow"
+                    className="text-slate-500 hover:text-[#7C3AED] transition-colors"
+                  >
                     How it works
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h5 className="text-xs font-bold text-[#0F172A] uppercase tracking-widest mb-4">Company</h5>
+              <h5 className="text-xs font-bold text-[#0F172A] uppercase tracking-widest mb-4">
+                Company
+              </h5>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/about" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
+                  <Link
+                    href="/about"
+                    className="text-slate-500 hover:text-[#7C3AED] transition-colors"
+                  >
                     About Us
                   </Link>
                 </li>
                 <li>
-                  <Link href="mailto:support@prepforge.com" className="text-slate-500 hover:text-[#7C3AED] transition-colors">
+                  <Link
+                    href="mailto:support@prepforge.com"
+                    className="text-slate-500 hover:text-[#7C3AED] transition-colors"
+                  >
                     Support Desk
                   </Link>
                 </li>
@@ -704,8 +1456,12 @@ export default function CleanPremiumLanding() {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-400 pt-8 border-t border-slate-50 w-full">
           <p>&copy; {new Date().getFullYear()} PrepForge. All Rights Reserved.</p>
           <div className="flex gap-4">
-            <Link href="/terms" className="hover:text-slate-600 transition-colors">Terms of Use</Link>
-            <Link href="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-600 transition-colors">
+              Terms of Use
+            </Link>
+            <Link href="/privacy" className="hover:text-slate-600 transition-colors">
+              Privacy Policy
+            </Link>
           </div>
         </div>
       </footer>
