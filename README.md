@@ -1,155 +1,631 @@
-# PrepForge: AI-Powered Faculty Evaluation Suite
+# PrepForge
 
-An automated grading platform designed specifically for JEE & NEET descriptive exams and OMR sheets.
+PrepForge is an exam-answer evaluation system for coaching institutes and schools that need to process descriptive answer sheets, OMR sheets, rubric-based marks, and review workflows at class scale.
+
+The important production problem is volume. A single subject for 200 students can easily become:
+
+```text
+200 students x 40 pages = 8,000 scanned pages
+```
+
+The system is designed around bulk processing, not manual one-by-one uploads. Teachers should not manage thousands of pages individually. They should create a batch, upload scanner exports, review only exceptions, and approve final results.
 
 ---
 
-## 🏗️ System Architecture & Workflow
+## Core Idea
 
-Here is how PrepForge processes an evaluation request:
+PrepForge has two evaluation paths:
+
+1. **Individual evaluation console**
+   - Useful for testing, demos, single-student evaluation, OMR checks, and report generation.
+   - Route: `/evaluate`
+
+2. **Bulk evaluation console**
+   - Built for real class-scale processing.
+   - One batch represents one exam, one subject, and one group of students.
+   - Teachers upload scanner PDFs/images/ZIP exports in bulk.
+   - The system counts pages, tracks processing stages, identifies review load, and prevents unclear handwriting from being auto-scored.
+   - Route: `/bulk-evaluation`
+
+The key fairness principle is simple:
+
+> OCR is evidence, not the final source of truth when handwriting is unclear.
+
+If the system is not confident, the answer goes to human review instead of silently lowering the student's score.
+
+---
+
+## Practical Bulk Workflow
+
+### 1. Physical Scanning
+
+Teachers or admin staff scan answer sheets using a copier/scanner with an automatic document feeder.
+
+Recommended scan settings:
+
+```text
+Resolution: 300 DPI
+Mode: grayscale or black-and-white
+Format: PDF
+Batch style: one PDF per class, subject, bundle, or roll-number range
+```
+
+Teachers do not upload 8,000 files. They upload a small number of scanner outputs, for example:
+
+```text
+physics-class12-roll-001-050.pdf
+physics-class12-roll-051-100.pdf
+physics-class12-roll-101-150.pdf
+physics-class12-roll-151-200.pdf
+```
+
+### 2. Batch Creation
+
+In `/bulk-evaluation`, the admin enters:
+
+- Batch title
+- Exam name
+- Subject
+- Expected student count
+- Expected pages per student
+- Scanner batch files
+
+For example:
+
+```text
+Subject: Physics
+Students: 200
+Pages each: 40
+Expected pages: 8,000
+```
+
+### 3. Page Accounting
+
+The backend uses `pdf-lib` to count PDF pages. Image files are counted as single pages.
+
+The system compares:
+
+- Expected pages
+- Detected pages
+- Missing/unmatched pages
+- Estimated low-confidence review count
+
+This catches operational mistakes early, such as:
+
+- Missing bundles
+- Duplicate uploads
+- Wrong subject upload
+- Incomplete scan
+- Cropped or unreadable pages
+
+### 4. Processing Gates
+
+The bulk console tracks the batch through practical gates:
+
+- Bulk intake
+- Page splitting
+- Student matching
+- OCR confidence gate
+- Human review
+
+This is intentionally simple. Teachers should see where the batch is stuck without understanding internal OCR or queue systems.
+
+### 5. Low-Confidence Review
+
+The system creates review items when a page or answer span is risky.
+
+Examples:
+
+- Low handwriting confidence
+- OCR and visual evidence disagree
+- Missing page
+- Cropped answer
+- Unmatched roll number
+- Borderline rubric match
+- High-mark question with uncertain text
+
+Teachers review only these flagged items, not every page.
+
+### 6. Finalization
+
+Final marks should be published only after:
+
+- Required low-confidence items are approved or corrected
+- Missing/unmatched pages are resolved
+- Sampling checks pass
+- Audit logs exist for manual overrides
+
+---
+
+## What Was Implemented
+
+### Bulk Evaluation Page
+
+File:
+
+```text
+app/bulk-evaluation/page.tsx
+```
+
+This page provides the teacher/admin UI for bulk processing.
+
+It includes:
+
+- Batch setup form
+- Expected page calculation
+- Scanner batch upload
+- Recent batches list
+- Processing gate dashboard
+- Low-confidence review queue
+- Approve/correct actions
+- External tool/key explanation
+
+This page is linked from the navbar as:
+
+```text
+Bulk Console
+```
+
+### Bulk Batch API
+
+File:
+
+```text
+app/api/bulk-batches/route.ts
+```
+
+Supported methods:
+
+```text
+GET    /api/bulk-batches
+POST   /api/bulk-batches
+PATCH  /api/bulk-batches
+```
+
+Responsibilities:
+
+- List recent bulk batches
+- Create a new batch from uploaded scanner files
+- Update review item status
+
+### Bulk Evaluation Store
+
+File:
+
+```text
+app/lib/bulk-evaluation-store.ts
+```
+
+Responsibilities:
+
+- Count uploaded PDF pages with `pdf-lib`
+- Summarize uploaded files
+- Estimate detected pages
+- Estimate review load
+- Build processing stages
+- Build review queue items
+- Track optional OCR/AI keys
+- Persist development data locally
+
+Local development persistence path:
+
+```text
+prisma/bulk_batches.json
+```
+
+This keeps the implementation usable without requiring a database migration immediately.
+
+### Environment Documentation
+
+File:
+
+```text
+.env.example
+```
+
+Added:
+
+```env
+MISTRAL_API_KEY=your_mistral_api_key_optional
+```
+
+This is optional. The bulk workflow does not require it.
+
+---
+
+## File System and Storage Design
+
+### Current Development Mode
+
+The current implementation stores bulk batch metadata in:
+
+```text
+prisma/bulk_batches.json
+```
+
+This stores:
+
+- Batch id
+- Exam metadata
+- Expected page count
+- Detected page count
+- Uploaded file summaries
+- Processing stages
+- Review items
+- Optional key status
+- Notes
+- Created timestamp
+
+This is enough for local development and demos.
+
+### Production Storage Design
+
+For production, files should not be stored in JSON or directly inside the app directory.
+
+Use this structure:
+
+```text
+object-storage/
+  institutions/{institutionId}/
+    exams/{examId}/
+      subjects/{subjectId}/
+        batches/{batchId}/
+          originals/
+            scanner-upload-001.pdf
+            scanner-upload-002.pdf
+          pages/
+            page-000001.png
+            page-000002.png
+          thumbnails/
+            page-000001.webp
+          ocr/
+            page-000001.json
+          reviews/
+            review-item-001.json
+          reports/
+            final-report.pdf
+```
+
+Recommended production storage:
+
+- **Supabase Storage** if you already use Supabase
+- **MinIO** for free self-hosted S3-compatible storage
+- **AWS S3 / Cloudflare R2** if you want managed object storage
+
+Recommended metadata database:
+
+- PostgreSQL
+- Prisma ORM
+
+Recommended queue:
+
+- Redis
+- BullMQ
+
+### Why Separate Files and Metadata?
+
+Large scans should live in object storage. Database rows should store metadata and references only.
+
+Good database records:
+
+```text
+batchId
+studentId
+subjectId
+pageNumber
+objectStorageKey
+ocrConfidence
+reviewStatus
+finalScore
+auditLogId
+```
+
+Bad database records:
+
+```text
+raw PDF binary
+full page image binary
+huge OCR blobs mixed with student rows
+```
+
+Keeping files separate makes the system cheaper, faster, and easier to back up.
+
+---
+
+## OCR Strategy
+
+OCR should be layered.
+
+### Free/Open-Source First
+
+Use free tools before paid APIs:
+
+- **PDF page extraction:** PDF.js or Poppler
+- **Image cleanup:** OpenCV
+- **Printed OCR:** Tesseract
+- **Queue workers:** BullMQ + Redis
+- **Object storage:** MinIO or Supabase Storage
+
+This is enough for:
+
+- Page counting
+- Printed roll numbers
+- Page labels
+- OMR-like regions
+- Basic scan quality checks
+- Routing pages to review
+
+### Optional OCR API Fallback
+
+External OCR or vision APIs are useful for hard handwriting, but they should not be mandatory for fairness.
+
+Optional keys:
+
+```env
+MISTRAL_API_KEY=...
+GEMINI_API_KEY=...
+```
+
+Use them only for:
+
+- Hard handwriting
+- Cropped or noisy pages
+- High-mark questions
+- Pages where local OCR confidence is low
+- Reducing manual review workload
+
+### Required External APIs?
+
+For the new bulk workflow:
+
+```text
+No external API key is required.
+```
+
+The system can run in local-only mode and route uncertain handwriting to review.
+
+For automatic AI grading:
+
+```text
+GEMINI_API_KEY is needed for Gemini-based grading already used elsewhere in the app.
+```
+
+For Mistral OCR:
+
+```text
+MISTRAL_API_KEY is optional and only needed if you want Mistral OCR fallback.
+```
+
+For Hugging Face:
+
+```text
+HF_TOKEN may be needed by existing Hugging Face embedding/analysis code, depending on deployment and API access.
+```
+
+---
+
+## Fairness Design
+
+OCR can favor neat handwriting. PrepForge must avoid turning handwriting neatness into marks.
+
+Fairness rules:
+
+1. Do not auto-score unclear handwriting with high confidence.
+2. Track confidence per page, question, and answer span.
+3. Send low-confidence answers to human review.
+4. Preserve the original scanned page as evidence.
+5. Let teachers override OCR text and marks.
+6. Store every override with timestamp and reason.
+7. Do not reduce marks only because OCR failed.
+8. Sample-check high-confidence results to detect systematic bias.
+
+### Confidence Gates
+
+Suggested thresholds:
+
+```text
+>= 85% confidence: eligible for auto-processing
+70-84% confidence: process, but sample-check
+50-69% confidence: review required for important answers
+< 50% confidence: manual review required
+```
+
+The thresholds should be tuned with real scanned papers before production use.
+
+### Audit Logs
+
+Every final score should be explainable.
+
+Store:
+
+- Original scan reference
+- OCR text
+- OCR confidence
+- Rubric point matched
+- Suggested mark
+- Final mark
+- Reviewer id
+- Override reason
+- Timestamp
+
+This makes the result defensible if a student or parent challenges it.
+
+---
+
+## Processing Architecture
+
+Recommended production architecture:
 
 ```mermaid
 graph TD
-    A["User Uploads Answer Sheet & Rubric"] --> B{"Handwritten or PDF?"}
-    B -- Yes --> C["Mistral OCR (mistral-ocr-latest)"]
-    B -- No / Typed --> D["Extract Answer & Rubric Text"]
-    C --> D
-    
-    D --> E{"Rubric Length > 6000 chars?"}
-    E -- Yes (RAG) --> F["HuggingFace Embeddings (all-MiniLM-L6-v2)"]
-    F --> G["Extract Top-6 Rubric Chunks via Cosine Similarity"]
-    E -- No --> H["Use Full Rubric"]
-    G --> I["Structured Prompt Context"]
-    H --> I
-    
-    I --> J["Gemini Grader (gemini-2.5-flash-lite)"]
-    J --> K["Structured JSON Step Grades & Marks"]
-    
-    K --> L["HuggingFace LLM (Mistral-7B-Instruct-v0.2)"]
-    L --> M["NCERT Strengths & Gaps Analysis"]
-    
-    M --> N["Prisma ORM (Save to Supabase DB)"]
-    N --> O["Generate HTML / PDF Print Report (/api/report)"]
+    A["Scanner Batch PDFs"] --> B["Bulk Upload"]
+    B --> C["Object Storage"]
+    B --> D["Batch Metadata in Postgres"]
+    D --> E["Redis/BullMQ Job Queue"]
+    E --> F["Page Split Worker"]
+    F --> G["Image Cleanup Worker"]
+    G --> H["Roll/Page Detection"]
+    H --> I["OCR Worker"]
+    I --> J["Confidence Scoring"]
+    J --> K{"Confidence OK?"}
+    K -- Yes --> L["Rubric Evaluation"]
+    K -- No --> M["Teacher Review Queue"]
+    M --> L
+    L --> N["Final Report + Audit Log"]
+```
+
+### Why Queue Workers?
+
+8,000 pages should not be processed inside a normal web request.
+
+Use background workers because:
+
+- Processing may take minutes or hours
+- Failed pages can retry
+- Multiple workers can run in parallel
+- The UI can show progress
+- The server does not timeout
+
+### Suggested Worker Jobs
+
+```text
+batch.created
+pdf.split
+page.cleaned
+page.roll_detected
+page.ocr_completed
+answer.segmented
+answer.scored
+review.required
+review.completed
+report.generated
 ```
 
 ---
 
-## 🧠 1. How and Where AI is Used (Multi-API Stack)
+## Existing Evaluation System
 
-PrepForge integrates several AI models to balance performance, cost, and reliability:
+The project also includes an individual evaluation console.
 
-### Multimodal Vision OCR (Mistral OCR)
-- **Model**: `mistral-ocr-latest`
-- **Use Case**: Faculty can upload handwritten answer copies or question booklets as images (JPEG, PNG, WEBP) or multi-page PDFs. The system transcribes them to markdown format, preserving formulas and mathematical expressions.
-- **Location**: Handles transcription inside [ocrAnswerSheets](file:///c:/Users/DELL/PrepForge/app/lib/ai-grading.ts#L174-L192) via [mistralOCR.ts](file:///c:/Users/DELL/PrepForge/app/lib/mistralOCR.ts).
+Important files:
 
-### Semantic RAG (HuggingFace Embeddings)
-- **Model**: `sentence-transformers/all-MiniLM-L6-v2` via the HuggingFace Inference API (`router.huggingface.co`).
-- **Use Case**: When rubrics are large, they are chunked. We compute semantic similarity between the student's answer and the rubric chunks, picking the top-6 relevant chunks to include in the grading prompt.
-- **Location**: Managed in [hfEmbeddings.ts](file:///c:/Users/DELL/PrepForge/app/lib/hfEmbeddings.ts) and integrated in `retrieveRubricContext` inside [ai-grading.ts](file:///c:/Users/DELL/PrepForge/app/lib/ai-grading.ts#L155-L172).
+```text
+app/evaluate/page.tsx
+app/api/evaluate/route.ts
+app/api/ocr/route.ts
+app/api/omr/route.ts
+app/api/report/route.ts
+app/lib/evaluation.ts
+app/lib/ai-grading.ts
+app/lib/gemini.ts
+app/lib/mistralOCR.ts
+app/lib/hfEmbeddings.ts
+app/lib/hfAnalysis.ts
+app/lib/evaluation-store.ts
+```
 
-### Strict Structured JSON Evaluation (Gemini)
-- **Model**: `gemini-2.5-flash-lite` (using `responseMimeType: "application/json"`)
-- **Use Case**: Performs step-by-step descriptive grading and reads OMR bubble sheets.
-- **Location**: Configured in [gemini.ts](file:///c:/Users/DELL/PrepForge/app/lib/gemini.ts) and executed in [ai-grading.ts](file:///c:/Users/DELL/PrepForge/app/lib/ai-grading.ts).
+This path handles:
 
-### NCERT Strengths & Gaps Analysis (HuggingFace LLM)
-- **Model**: `mistralai/Mistral-7B-Instruct-v0.2` via HuggingFace Inference API (`router.huggingface.co`).
-- **Use Case**: Provides personalized revision advice, weak areas with exact NCERT chapter names, and a revision plan with PYQ count.
-- **Location**: Handled in [hfAnalysis.ts](file:///c:/Users/DELL/PrepForge/app/lib/hfAnalysis.ts) and triggered in [evaluate/route.ts](file:///c:/Users/DELL/PrepForge/app/api/evaluate/route.ts#L118-L123).
+- Descriptive answer evaluation
+- OMR scoring
+- OCR calls
+- Rubric-based grading
+- Report generation
+- Evaluation history
 
----
-
-## 🛡️ Fail-Safe & Robust Design
-
-To ensure uninterrupted faculty usage, PrepForge implements a multi-tier fallback architecture:
-
-> [!IMPORTANT]
-> **API Key Resiliency**
-> - **HuggingFace Failure**: If the `HF_TOKEN` in `.env` is missing, invalid (e.g. 401 Unauthorized), or blocked by your network/DNS, the application **does not crash**. 
-> - **Embeddings Fallback**: If the HuggingFace embeddings API fails, the system automatically falls back to raw local keyword/chunk mapping.
-> - **Analysis Fallback**: If the HuggingFace analysis API fails, the system bypasses it gracefully and tags a `"please review manually"` or token error message, allowing grading and saving to finish successfully.
-> - **No-AI Local Mode**: If both Gemini and Mistral keys are missing, the platform shifts to a fully local keyword-matching regex evaluator.
+The bulk system is complementary. It should eventually feed grouped answer text and review-confirmed spans into the same grading/reporting logic.
 
 ---
 
-## 🛠️ 2. Key Platform Features
+## Recommended Next Implementation Steps
 
-### Dual Evaluation Console
-- **Descriptive Console**: Grades handwritten subjective copies against marking rubrics.
-- **OMR Console**: Detects bubbles, warns of anomalies (double bubbles, faint marks), and calculates standard JEE/NEET negative markings (`+4` / `-1`).
+1. Replace local JSON bulk storage with Prisma models:
+   - `BulkBatch`
+   - `BulkFile`
+   - `BulkPage`
+   - `BulkReviewItem`
+   - `BulkAuditLog`
 
-### Citations and Evidence Tracking
-For every step evaluated, the grader attaches the student's exact quote from their scanned answer. This gives students and parents concrete, proof-based grading feedback.
+2. Add object storage:
+   - Supabase Storage or MinIO
+   - Save originals, page images, thumbnails, OCR JSON, and reports
 
-### Live Dashboard & Evaluation History
-A responsive, glassmorphic dark-mode console where all historical evaluation results are stored. Records can be loaded back into the active view, verified, or deleted.
+3. Add worker queue:
+   - Redis
+   - BullMQ
+   - Separate page processing from Next.js request handlers
 
-### Downloadable Print Reports
-Generate parent-friendly, print-to-PDF optimized HTML evaluation cards at the click of a button, supported by server-side templates.
+4. Add real page splitting:
+   - PDF.js or Poppler
+   - Store page images individually
+
+5. Add scan-quality checks:
+   - Blur detection
+   - Skew detection
+   - Crop detection
+   - Contrast detection
+
+6. Add roll/page matching:
+   - Printed QR/barcode if possible
+   - Printed roll number OCR fallback
+   - Manual exception screen
+
+7. Add real OCR confidence scoring:
+   - Local OCR first
+   - Optional Mistral/Gemini fallback
+   - Human review for low confidence
+
+8. Connect final reviewed answers to grading:
+   - Use existing rubric grading
+   - Store citations and score evidence
+   - Generate final reports
 
 ---
 
-## 🗂️ Integrations File Map
+## Development Setup
 
-| File Path | Description |
-|---|---|
-| 🆕 [mistralOCR.ts](file:///c:/Users/DELL/PrepForge/app/lib/mistralOCR.ts) | SDK Client wrapper that handles image & PDF OCR processing using `mistral-ocr-latest`. |
-| 🆕 [hfEmbeddings.ts](file:///c:/Users/DELL/PrepForge/app/lib/hfEmbeddings.ts) | Embedding utility generating vector representation of answers and chunking rubrics for Cosine Similarity calculations. |
-| 🆕 [hfAnalysis.ts](file:///c:/Users/DELL/PrepForge/app/lib/hfAnalysis.ts) | Summarization tool calling `Mistral-7B-Instruct` for NCERT chapter analysis. |
-| 🆕 [reportGenerator.ts](file:///c:/Users/DELL/PrepForge/app/lib/reportGenerator.ts) | Formats student metrics, strengths, weaknesses, and citations into an elegant printable HTML layout. |
-| 🆕 [report/route.ts](file:///c:/Users/DELL/PrepForge/app/api/report/route.ts) | Express POST route that serves the generated HTML report for client/browser printing. |
-| 🔄 [ai-grading.ts](file:///c:/Users/DELL/PrepForge/app/lib/ai-grading.ts) | Main orchestrator rewritten to use Mistral OCR and HuggingFace semantic context embedding retrieval. |
-| 🔄 [evaluate/route.ts](file:///c:/Users/DELL/PrepForge/app/api/evaluate/route.ts) | Wire-up of evaluate pipeline: Mistral OCR ➡️ HF Embeddings RAG ➡️ Gemini Grading ➡️ HF NCERT analysis. |
-| 🔄 [ocr/route.ts](file:///c:/Users/DELL/PrepForge/app/api/ocr/route.ts) | Integrated Mistral OCR for general scanning, retaining Gemini only for bubble-coordinate OMR parsing. |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL (or use SQLite/local mode)
-- API Keys: Google Gemini key, Mistral AI key, HuggingFace token.
-
-### Installation
+Install dependencies:
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/PrepForge.git
-cd PrepForge
-
-# Install dependencies
 npm install
+```
 
-# Set up environment variables
+Copy environment file:
+
+```bash
 cp .env.example .env
 ```
 
-Open `.env` and fill in the required API keys:
-```env
-GEMINI_API_KEY=your_gemini_key
-GEMINI_MODEL=gemini-2.5-flash-lite
+Start development server:
 
-MISTRAL_API_KEY=your_mistral_key
-HF_TOKEN=your_huggingface_token
-```
-
-### Starting the Server
 ```bash
-# Run database migrations
-npx prisma migrate dev
-
-# Start Next.js dev server
 npm run dev
 ```
 
-On Windows, you can also run:
-- `setup.bat`: For first-time setups and dependency installations.
-- `dev.bat`: Launches the Next.js local server directly.
+Useful routes:
+
+```text
+/                  Landing page
+/evaluate          Individual evaluation console
+/bulk-evaluation  Bulk scanner batch workflow
+/architecture      System blueprint page
+/handwriting-fairness  Handwriting fairness dashboard
+```
 
 ---
 
-## 📄 License
+## Current Verification Notes
+
+Targeted lint passes for the new bulk implementation files:
+
+```bash
+npx.cmd eslint app/bulk-evaluation/page.tsx app/api/bulk-batches/route.ts app/lib/bulk-evaluation-store.ts app/components/Navbar.tsx
+```
+
+Full project lint/build currently has existing unrelated failures in handwriting fairness files and a `Jimp` import issue. Those should be fixed separately before production deployment.
+
+---
+
+## License
+
 This project is proprietary. All rights reserved.
----
