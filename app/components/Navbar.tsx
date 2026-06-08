@@ -9,6 +9,7 @@ import gsap from "gsap";
 const navLinks = [
   { label: "Features", href: "/#features" },
   { label: "How It Works", href: "/#workflow" },
+  { label: "Architecture", href: "/architecture" },
 ];
 
 export default function Navbar() {
