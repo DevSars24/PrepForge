@@ -66,6 +66,8 @@ export interface ConfidenceResult {
   redWordCount: number;
   /** Recommended action for this page */
   recommendation: "auto_grade" | "ai_grade_with_flag" | "teacher_review_first";
+  /** Optional explanation of why the page was flagged or failed legibility checks */
+  reason?: string;
 }
 
 export interface OcrResult {
@@ -246,9 +248,145 @@ function scoreWordPair(wordA: string, wordB: string): number {
  *     sendToAiGrading(result.fullText);
  *   }
  */
+async function scoreConfidenceWithSarvam(
+  imageBuffer: Buffer,
+  apiKey: string
+): Promise<ConfidenceResult> {
+  const isPdf = imageBuffer[0] === 37 && imageBuffer[1] === 80 && imageBuffer[2] === 68 && imageBuffer[3] === 70;
+  let pdfBuffer = imageBuffer;
+  const mimeType = imageBuffer[0] === 137 ? "image/png" : "image/jpeg";
+
+  if (!isPdf) {
+    const { compileImagesToPdf } = await import("../../app/lib/sarvam");
+    pdfBuffer = await compileImagesToPdf([{ buffer: imageBuffer, mimeType }]);
+  }
+
+  const { digitizeDocument } = await import("../../app/lib/sarvam");
+  const transcription = await digitizeDocument(pdfBuffer, isPdf ? "document.pdf" : "sheet.pdf");
+
+  const { geminiGenerateJson, imagePart } = await import("../../app/lib/gemini");
+  const { SchemaType } = await import("@google/generative-ai");
+
+  const prompt = `You are a handwriting quality auditor for student exam papers.
+Your task is to:
+1. Evaluate the legibility of the student's handwriting in the provided scan.
+2. Check if the handwriting is poor, messy, faint, highly cursive, or contains smudged text that could cause grading errors.
+3. Identify specific words in the transcription that are low-confidence, messy, or illegible.
+
+Here is the transcribed text of the document:
+"""
+${transcription}
+"""
+
+Return a JSON object matching the requested schema.`;
+
+  const handwritingSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+      legibilityScore: { type: SchemaType.NUMBER, description: "Handwriting legibility score from 0 to 100." },
+      needsReview: { type: SchemaType.BOOLEAN, description: "true if handwriting is messy, cursive, smudged, or difficult to read." },
+      reason: { type: SchemaType.STRING, description: "A detailed explanation for the teacher explaining why it is flagged or needs review." },
+      flaggedWords: {
+        type: SchemaType.ARRAY,
+        description: "A list of specific words from the transcription that are low-confidence, messy, or illegible.",
+        items: {
+          type: SchemaType.OBJECT,
+          properties: {
+            word: { type: SchemaType.STRING },
+            zone: { type: SchemaType.STRING, format: "enum", enum: ["red", "amber"] },
+            alternateReading: { type: SchemaType.STRING }
+          },
+          required: ["word", "zone", "alternateReading"]
+        }
+      }
+    },
+    required: ["legibilityScore", "needsReview", "reason", "flaggedWords"]
+  };
+
+  const parts = [];
+  if (!isPdf) {
+    parts.push(imagePart(imageBuffer.toString("base64"), mimeType));
+  }
+
+  interface GeminiHandwritingResult {
+    legibilityScore: number;
+    needsReview: boolean;
+    reason: string;
+    flaggedWords: { word: string; zone: string; alternateReading: string }[];
+  }
+
+  const geminiResult = await geminiGenerateJson<GeminiHandwritingResult>(
+    prompt,
+    parts,
+    handwritingSchema as any
+  );
+
+  const lines = transcription.split(/\n+/).map((l) => l.split(/\s+/).filter(Boolean));
+  const scoredWords: ScoredWord[] = [];
+
+  lines.forEach((lineWords, lineIdx) => {
+    lineWords.forEach((word, wordIdx) => {
+      const cleanWord = normalizeWord(word);
+      const flagged = geminiResult.flaggedWords?.find((fw) => normalizeWord(fw.word) === cleanWord);
+
+      if (flagged) {
+        scoredWords.push({
+          word,
+          confidence: flagged.zone === "red" ? 35 : 65,
+          zone: flagged.zone as any,
+          position: { line: lineIdx, index: wordIdx },
+          alternateReading: flagged.alternateReading || word,
+          isDisagreement: true,
+        });
+      } else {
+        scoredWords.push({
+          word,
+          confidence: 90,
+          zone: "green",
+          position: { line: lineIdx, index: wordIdx },
+          alternateReading: word,
+          isDisagreement: false,
+        });
+      }
+    });
+  });
+
+  const pageConfidence = geminiResult.legibilityScore;
+  const flaggedWordCount = scoredWords.filter((w) => w.zone === "amber" || w.zone === "red").length;
+  const redWordCount = scoredWords.filter((w) => w.zone === "red").length;
+
+  let recommendation: ConfidenceResult["recommendation"] = "auto_grade";
+  if (geminiResult.needsReview) {
+    recommendation = "teacher_review_first";
+  } else if (flaggedWordCount > 0) {
+    recommendation = "ai_grade_with_flag";
+  }
+
+  return {
+    fullText: transcription,
+    enhancedText: transcription,
+    words: scoredWords,
+    pageConfidence,
+    needsReview: geminiResult.needsReview,
+    flaggedWordCount,
+    redWordCount,
+    recommendation,
+    reason: geminiResult.reason,
+  };
+}
+
 export async function scoreConfidence(
   imageBuffer: Buffer
 ): Promise<ConfidenceResult> {
+  const sarvamKey = process.env.SARVAM_API_KEY;
+  if (sarvamKey) {
+    try {
+      return await scoreConfidenceWithSarvam(imageBuffer, sarvamKey);
+    } catch (sarvamErr) {
+      console.warn("[ConfidenceScorer] Sarvam pipeline failed, falling back to local OCR:", sarvamErr);
+    }
+  }
+
   // ── Phase 1: Run OCR on original image ─────────────────────────────────
   const result1 = await runOcr(imageBuffer, "original");
 

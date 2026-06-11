@@ -291,7 +291,7 @@ async function generateFairnessPdf(data: FairnessReportData): Promise<void> {
 
   // ── Trigger browser download ──────────────────────────────────────────
   const pdfBytes = await doc.save();
-  const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+  const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -363,15 +363,15 @@ export default function FairnessReport({ data }: FairnessReportProps) {
 
   // ─── RENDER ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
+    <div className="min-h-screen overflow-x-hidden bg-gray-950 p-4 text-white sm:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="mb-1 flex items-start gap-2 sm:items-center">
               <span className="text-3xl">⚖️</span>
-              <h1 className="text-3xl font-bold text-white">Fairness Report</h1>
+              <h1 className="text-2xl font-bold text-white sm:text-3xl">Fairness Report</h1>
             </div>
             <p className="text-gray-400">{data.examName} · {data.instituteName}</p>
             <p className="text-sm text-gray-600 mt-0.5">
@@ -381,7 +381,7 @@ export default function FairnessReport({ data }: FairnessReportProps) {
           <button
             onClick={handleExportPdf}
             disabled={exportingPdf}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-colors shadow-lg"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-500 disabled:opacity-60 sm:w-auto"
           >
             {exportingPdf ? (
               <>
@@ -398,7 +398,7 @@ export default function FairnessReport({ data }: FairnessReportProps) {
         </div>
 
         {/* ── Stats Cards ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[
             { label: "Total Students", value: stats.total, icon: "👨‍🎓" },
             {
@@ -437,7 +437,7 @@ export default function FairnessReport({ data }: FairnessReportProps) {
           ].map((card) => (
             <div
               key={card.label}
-              className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-1"
+              className="flex min-w-0 flex-col gap-1 rounded-2xl border border-gray-800 bg-gray-900 p-4 transition hover:-translate-y-0.5 hover:border-gray-700"
             >
               <span className="text-2xl">{card.icon}</span>
               <span className={`text-2xl font-bold ${card.color || "text-white"}`}>
@@ -472,9 +472,9 @@ export default function FairnessReport({ data }: FairnessReportProps) {
         </div>
 
         {/* ── Student Table ─────────────────────────────────────────────── */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900">
           {/* Table toolbar */}
-          <div className="px-5 py-4 border-b border-gray-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 border-b border-gray-800 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5">
             <h2 className="font-semibold text-white">
               Per-Student Breakdown
               <span className="ml-2 text-xs text-gray-500 font-normal">
@@ -486,13 +486,13 @@ export default function FairnessReport({ data }: FairnessReportProps) {
               placeholder="Search by name or roll…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-60"
+              className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-white placeholder-gray-500 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-60"
             />
           </div>
 
           {/* Scrollable table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+            <table className="min-w-[840px] w-full text-sm">
               <thead>
                 <tr className="bg-gray-800/60">
                   {(

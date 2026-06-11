@@ -98,12 +98,12 @@ export default function BulkEvaluationPage() {
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <Navbar />
 
-      <section className="px-6 pb-8 pt-24">
+      <section className="px-4 pb-8 pt-24 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 md:flex-row md:items-end md:justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-widest text-[#7C3AED]">Bulk evaluation console</p>
-              <h1 className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">
+              <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
                 Process scanner batches, not 8,000 manual uploads.
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
@@ -111,7 +111,7 @@ export default function BulkEvaluationPage() {
                 confidence gates, then review only flagged handwriting or matching exceptions.
               </p>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 text-sm shadow-sm">
+            <div className="w-full rounded-lg border border-slate-200 bg-white px-4 py-4 text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:w-auto sm:px-5">
               <p className="font-bold text-slate-900">{expectedPages.toLocaleString()} expected pages</p>
               <p className="text-slate-500">
                 {form.expectedStudents} students x {form.pagesPerStudent} pages
@@ -121,10 +121,10 @@ export default function BulkEvaluationPage() {
         </div>
       </section>
 
-      <section className="px-6 pb-12">
-        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[420px_1fr]">
+      <section className="px-4 pb-12 sm:px-6">
+        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
           <aside className="space-y-5">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
               <div className="mb-5 flex items-center gap-3">
                 <Upload className="h-5 w-5 text-[#7C3AED]" />
                 <h2 className="font-bold">Create batch</h2>
@@ -134,7 +134,7 @@ export default function BulkEvaluationPage() {
                 <Field label="Batch title" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
                 <Field label="Exam name" value={form.examName} onChange={(value) => setForm({ ...form, examName: value })} />
                 <Field label="Subject" value={form.subject} onChange={(value) => setForm({ ...form, subject: value })} />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <NumberField
                     label="Students"
                     value={form.expectedStudents}
@@ -148,7 +148,7 @@ export default function BulkEvaluationPage() {
                 </div>
               </div>
 
-              <label className="mt-5 block rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:border-[#7C3AED] hover:bg-purple-50">
+              <label className="mt-5 block cursor-pointer rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center transition hover:-translate-y-0.5 hover:border-[#7C3AED] hover:bg-purple-50">
                 <ScanLine className="mx-auto mb-2 h-7 w-7 text-[#7C3AED]" />
                 <span className="block text-sm font-bold text-slate-900">Upload scanner batch files</span>
                 <span className="mt-1 block text-xs leading-5 text-slate-500">
@@ -166,7 +166,7 @@ export default function BulkEvaluationPage() {
               {files.length > 0 && (
                 <div className="mt-4 space-y-2">
                   {files.map((file) => (
-                    <div key={`${file.name}-${file.size}`} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs">
+                    <div key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs">
                       <span className="truncate font-medium text-slate-700">{file.name}</span>
                       <span className="shrink-0 text-slate-400">{formatBytes(file.size)}</span>
                     </div>
@@ -177,7 +177,7 @@ export default function BulkEvaluationPage() {
               <button
                 onClick={createBatch}
                 disabled={loading || files.length === 0}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#7C3AED] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#6D28D9] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#7C3AED] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#6D28D9] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileStack className="h-4 w-4" />}
                 Create processing batch
@@ -190,7 +190,7 @@ export default function BulkEvaluationPage() {
               )}
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
               <div className="mb-4 flex items-center gap-3">
                 <Archive className="h-5 w-5 text-[#7C3AED]" />
                 <h2 className="font-bold">Recent batches</h2>
@@ -201,7 +201,7 @@ export default function BulkEvaluationPage() {
                   <button
                     key={batch.id}
                     onClick={() => setActiveBatch(batch)}
-                    className={`w-full rounded-lg border px-3 py-3 text-left transition ${
+                    className={`min-h-14 w-full rounded-lg border px-3 py-3 text-left transition hover:-translate-y-0.5 ${
                       activeBatch?.id === batch.id
                         ? "border-[#7C3AED] bg-purple-50"
                         : "border-slate-200 bg-white hover:border-slate-300"
@@ -245,21 +245,21 @@ function BatchDashboard({
 }) {
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Metric label="Expected pages" value={batch.expectedPages.toLocaleString()} />
         <Metric label="Detected pages" value={batch.detectedPages.toLocaleString()} />
         <Metric label="Needs review" value={String(batch.reviewRequired)} tone={batch.reviewRequired ? "warn" : "good"} />
         <Metric label="Status" value={batch.status.replace("_", " ")} />
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
         <div className="mb-5 flex items-center gap-3">
           <ShieldCheck className="h-5 w-5 text-[#7C3AED]" />
           <h2 className="font-bold">Processing gates</h2>
         </div>
-        <div className="grid gap-3 md:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {batch.stages.map((stage) => (
-            <div key={stage.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div key={stage.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 transition hover:border-slate-300 hover:bg-white">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-sm font-bold text-slate-900">{stage.label}</p>
                 {stage.status === "done" ? (
@@ -274,8 +274,8 @@ function BatchDashboard({
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
           <h2 className="mb-4 font-bold">Low-confidence review queue</h2>
           <div className="space-y-3">
             {batch.reviewItems.length === 0 && (
@@ -284,8 +284,8 @@ function BatchDashboard({
               </p>
             )}
             {batch.reviewItems.map((item) => (
-              <div key={item.id} className="grid gap-3 rounded-lg border border-slate-200 p-4 md:grid-cols-[1fr_auto]">
-                <div>
+              <div key={item.id} className="grid gap-3 rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 hover:shadow-sm md:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
                       {item.roll}
@@ -302,16 +302,16 @@ function BatchDashboard({
                   </div>
                   <p className="mt-3 text-sm leading-6 text-slate-600">{item.reason}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
                   <button
                     onClick={() => onReview(item, "approved")}
-                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700"
+                    className="min-h-10 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:-translate-y-0.5 hover:bg-emerald-100"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => onReview(item, "corrected")}
-                    className="rounded-lg border border-[#7C3AED]/20 bg-purple-50 px-3 py-2 text-xs font-bold text-[#7C3AED]"
+                    className="min-h-10 rounded-lg border border-[#7C3AED]/20 bg-purple-50 px-3 py-2 text-xs font-bold text-[#7C3AED] transition hover:-translate-y-0.5 hover:bg-purple-100"
                   >
                     Correct
                   </button>
@@ -321,7 +321,7 @@ function BatchDashboard({
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
           <h2 className="font-bold">External tools and keys</h2>
           <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
             <p>
@@ -353,7 +353,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#7C3AED] focus:ring-2 focus:ring-purple-100"
+        className="min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#7C3AED] focus:ring-2 focus:ring-purple-100"
       />
     </label>
   );
@@ -368,7 +368,7 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
         min={1}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#7C3AED] focus:ring-2 focus:ring-purple-100"
+        className="min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#7C3AED] focus:ring-2 focus:ring-purple-100"
       />
     </label>
   );
@@ -377,9 +377,9 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
 function Metric({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" }) {
   const color = tone === "good" ? "text-emerald-700" : tone === "warn" ? "text-orange-700" : "text-slate-950";
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-extrabold capitalize tracking-tight ${color}`}>{value}</p>
+      <p className={`mt-2 break-words text-xl font-extrabold capitalize tracking-tight sm:text-2xl ${color}`}>{value}</p>
     </div>
   );
 }

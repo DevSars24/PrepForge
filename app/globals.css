@@ -1,6 +1,20 @@
 @import "tailwindcss";
 
 @source "./app/**/*.{js,ts,jsx,tsx}";
+@source "./features/**/*.{js,ts,jsx,tsx}";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    PrepForge — Premium Light Theme
@@ -80,6 +94,53 @@ body {
   min-height: 100vh;
 }
 
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  min-height: 44px;
+  width: 100%;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Faculty Console (Evaluate Page)
    ═══════════════════════════════════════════════════════════════ */
@@ -114,6 +175,13 @@ body {
   padding: 28px;
   margin-bottom: 24px;
   box-shadow: var(--shadow-sm);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.student-form-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
 .student-form-card h2 {
@@ -188,11 +256,13 @@ body {
   cursor: pointer;
   transition: all 0.25s ease;
   background: var(--bg-card);
+  min-height: 140px;
 }
 
 .upload-zone:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
+  transform: translateY(-1px);
 }
 
 .upload-zone.has-files {
@@ -232,6 +302,14 @@ body {
   background: var(--bg-surface);
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
+  gap: 10px;
+}
+
+.file-item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-item-name {
@@ -278,6 +356,12 @@ body {
   box-shadow: var(--shadow-accent);
 }
 
+.evaluate-btn:active:not(:disabled),
+.result-tab:active,
+.file-item-remove:active {
+  transform: translateY(0) scale(0.99);
+}
+
 .evaluate-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -292,6 +376,58 @@ body {
   50% { opacity: 1; }
 }
 
+.btn-primary,
+.btn-secondary {
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-primary {
+  color: var(--text-inverse);
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  box-shadow: var(--shadow-accent);
+}
+
+.btn-secondary {
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.animate-fade {
+  animation: fade-lift 0.45s ease both;
+}
+
+@keyframes fade-lift {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Result Tabs */
 .result-tabs {
   display: flex;
@@ -299,6 +435,14 @@ body {
   margin-bottom: 20px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.result-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .result-tab {
@@ -312,6 +456,8 @@ body {
   border-bottom: 2px solid transparent;
   transition: all 0.2s ease;
   margin-bottom: -1px;
+  min-height: 44px;
+  white-space: nowrap;
 }
 
 .result-tab:hover {
@@ -331,6 +477,13 @@ body {
   padding: 24px;
   margin-bottom: 16px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.result-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .result-card h3 {
@@ -616,6 +769,8 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   transition: all 0.2s ease;
+  gap: 16px;
+  min-width: 0;
 }
 
 .history-item:hover {
@@ -664,6 +819,69 @@ body {
    ═══════════════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
+  body {
+    line-height: 1.55;
+  }
+
+  .console-page {
+    padding: 88px 1rem 28px;
+  }
+
+  .console-header {
+    margin-bottom: 20px;
+  }
+
+  .console-greeting {
+    font-size: 1.35rem;
+  }
+
+  .student-form-card,
+  .result-card,
+  .summary-banner {
+    border-radius: var(--radius-md);
+    padding: 18px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .upload-zone {
+    padding: 20px 16px;
+    min-height: 132px;
+  }
+
+  .result-tabs {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .result-tab {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+
+  .step-grade-header,
+  .history-item,
+  .trace-step {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .step-grade-score {
+    align-self: flex-start;
+  }
+
+  .history-score {
+    text-align: left;
+  }
+
+  .file-item {
+    align-items: flex-start;
+  }
+
   .hero {
     padding: 110px 1.25rem 60px;
   }
@@ -695,6 +913,31 @@ body {
   .navbar-link {
     padding: 6px 10px;
     font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .console-page {
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
+
+  .student-form-card,
+  .result-card,
+  .summary-banner,
+  .warning-banner {
+    padding: 16px;
+  }
+
+  .evaluate-btn {
+    min-height: 48px;
+    padding: 13px;
+    font-size: 0.92rem;
+  }
+
+  .score-circle {
+    height: 104px;
+    width: 104px;
   }
 }
 

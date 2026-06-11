@@ -34,7 +34,7 @@
  * ─────────────────────────────────────────────────────────────────────
  */
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import type { ScoredWord, ConfidenceResult } from "./ConfidenceScorer";
 
@@ -213,7 +213,7 @@ export default function ReviewQueue({
   const [corrections, setCorrections] = useState<WordCorrection[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [completedPages, setCompletedPages] = useState<PageReviewResult[]>([]);
-  const [pageStartTime, setPageStartTime] = useState(Date.now());
+  const [pageStartTime, setPageStartTime] = useState(() => Date.now());
   const [totalTimeSavedSeconds, setTotalTimeSavedSeconds] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -237,22 +237,28 @@ export default function ReviewQueue({
   // ── Focus input when flagged word changes ─────────────────────────────
   useEffect(() => {
     if (currentFlagWord) {
-      setInputValue(currentFlagWord.word);
-      setTimeout(() => inputRef.current?.select(), 50);
+      const timer = window.setTimeout(() => {
+        setInputValue(currentFlagWord.word);
+        inputRef.current?.select();
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [flagWordIndex, pageIndex, currentFlagWord]);
 
   // Reset state when starting a new page
   useEffect(() => {
-    setFlagWordIndex(0);
-    setCorrections([]);
-    setInputValue("");
-    setPageStartTime(Date.now());
+    const timer = window.setTimeout(() => {
+      setFlagWordIndex(0);
+      setCorrections([]);
+      setInputValue("");
+      setPageStartTime(Date.now());
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [pageIndex]);
 
   // ── Handlers ─────────────────────────────────────────────────────────
 
-  const confirmCurrentWord = useCallback(() => {
+  function confirmCurrentWord() {
     if (!currentFlagWord) return;
 
     const correctedWord = inputValue.trim() || currentFlagWord.word;
@@ -273,13 +279,13 @@ export default function ReviewQueue({
     }
 
     advanceToNextFlag();
-  }, [currentFlagWord, inputValue]);
+  }
 
-  const skipCurrentWord = useCallback(() => {
+  function skipCurrentWord() {
     advanceToNextFlag();
-  }, [flagWordIndex, flaggedWords.length]);
+  }
 
-  const advanceToNextFlag = useCallback(() => {
+  function advanceToNextFlag() {
     if (flagWordIndex < flaggedWords.length - 1) {
       // More flagged words on this page
       setFlagWordIndex((i) => i + 1);
@@ -287,9 +293,9 @@ export default function ReviewQueue({
       // Page complete — save result and move on
       finishCurrentPage();
     }
-  }, [flagWordIndex, flaggedWords.length, corrections, currentPage, pageStartTime]);
+  }
 
-  const finishCurrentPage = useCallback(() => {
+  function finishCurrentPage() {
     if (!currentPage) return;
     const timeTakenSeconds = Math.round((Date.now() - pageStartTime) / 1000);
 
@@ -315,33 +321,21 @@ export default function ReviewQueue({
     } else {
       setPageIndex((i) => i + 1);
     }
-  }, [
-    currentPage,
-    corrections,
-    completedPages,
-    pageIndex,
-    pages.length,
-    pageStartTime,
-    onPageDone,
-    onReviewComplete,
-  ]);
+  }
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        confirmCurrentWord();
-      } else if (e.key === "Tab") {
-        e.preventDefault();
-        skipCurrentWord();
-      } else if (e.key === "Escape") {
-        setInputValue(currentFlagWord?.word ?? "");
-        inputRef.current?.blur();
-      }
-    },
-    [confirmCurrentWord, skipCurrentWord, currentFlagWord]
-  );
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmCurrentWord();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      skipCurrentWord();
+    } else if (e.key === "Escape") {
+      setInputValue(currentFlagWord?.word ?? "");
+      inputRef.current?.blur();
+    }
+  }
 
   // ─── RENDER: All done ──────────────────────────────────────────────────
   if (isComplete) {
@@ -379,9 +373,9 @@ export default function ReviewQueue({
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
 
       {/* ── Top Header ─────────────────────────────────────────────────── */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+      <div className="bg-gray-900 border-b border-gray-800 px-4 py-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl">📋</span>
               <div>
@@ -391,7 +385,7 @@ export default function ReviewQueue({
                 </p>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <p className="text-sm text-gray-400">Time saved so far</p>
               <p className="text-green-400 font-bold">
                 ⏱️ {formatSeconds(totalTimeSavedSeconds)}
@@ -415,9 +409,9 @@ export default function ReviewQueue({
       </div>
 
       {/* ── Current page label ──────────────────────────────────────────── */}
-      <div className="bg-gray-900/60 border-b border-gray-800 px-6 py-2">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <p className="text-sm text-gray-300">
+      <div className="bg-gray-900/60 border-b border-gray-800 px-4 py-3 sm:px-6">
+        <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="min-w-0 text-sm text-gray-300">
             📄 <span className="font-medium">{currentPage.label}</span>
           </p>
           <span className="text-xs text-gray-500">
@@ -438,11 +432,11 @@ export default function ReviewQueue({
       </div>
 
       {/* ── Main Content: Two Columns ──────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full p-4 gap-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 overflow-visible p-4 lg:flex-row lg:overflow-hidden">
 
         {/* LEFT: Zoomable original image */}
-        <div className="w-1/2 bg-gray-900 rounded-2xl border border-gray-700 overflow-hidden flex flex-col">
-          <div className="px-4 py-3 border-b border-gray-700 flex items-center gap-2">
+        <div className="flex min-h-[320px] w-full flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900 lg:w-1/2">
+          <div className="flex flex-wrap items-center gap-2 border-b border-gray-700 px-4 py-3">
             <span className="text-sm text-gray-400">🔍 Original scan</span>
             <span className="text-xs text-gray-600">
               (pinch/scroll to zoom)
@@ -462,7 +456,7 @@ export default function ReviewQueue({
                 <img
                   src={currentPage.imageDataUrl}
                   alt={`Original scan: ${currentPage.label}`}
-                  className="max-w-full object-contain"
+                  className="max-h-[70dvh] max-w-full object-contain lg:max-h-none"
                 />
               </TransformComponent>
             </TransformWrapper>
@@ -470,13 +464,13 @@ export default function ReviewQueue({
         </div>
 
         {/* RIGHT: OCR text with highlights + correction input */}
-        <div className="w-1/2 flex flex-col gap-3">
+        <div className="flex w-full flex-col gap-3 lg:w-1/2">
 
           {/* OCR text panel */}
-          <div className="flex-1 bg-gray-900 rounded-2xl border border-gray-700 flex flex-col overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+          <div className="flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-2xl border border-gray-700 bg-gray-900">
+            <div className="flex flex-col gap-2 border-b border-gray-700 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm text-gray-400">📝 OCR Output</span>
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="bg-red-500/20 text-red-300 border border-red-500/40 rounded px-2 py-0.5">
                   RED = must fix
                 </span>
@@ -496,14 +490,14 @@ export default function ReviewQueue({
           </div>
 
           {/* Correction panel */}
-          <div className="bg-gray-900 rounded-2xl border border-gray-700 p-5">
+          <div className="rounded-2xl border border-gray-700 bg-gray-900 p-4 sm:p-5">
 
             {/* Word progress within this page */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-gray-500">
                 Word {flagWordIndex + 1} of {flaggedWords.length} flagged on this page
               </p>
-              <div className="flex-1 mx-3 bg-gray-800 rounded-full h-1 overflow-hidden">
+              <div className="h-1 w-full flex-1 overflow-hidden rounded-full bg-gray-800 sm:mx-3">
                 <div
                   className="bg-indigo-500 h-1 rounded-full transition-all duration-300"
                   style={{ width: `${wordProgressPercent}%` }}
@@ -514,7 +508,7 @@ export default function ReviewQueue({
             {currentFlagWord ? (
               <>
                 {/* Zone badge + flagged word */}
-                <div className="mb-3 flex items-center gap-3">
+                <div className="mb-3 flex flex-wrap items-center gap-3">
                   <span
                     className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
                       currentFlagWord.zone === "red"
@@ -527,7 +521,7 @@ export default function ReviewQueue({
                   <p className="text-sm text-gray-300">
                     Flagged word:{" "}
                     <code className="bg-gray-800 px-2 py-0.5 rounded text-white font-mono">
-                      "{currentFlagWord.word}"
+                      &quot;{currentFlagWord.word}&quot;
                     </code>
                   </p>
                 </div>
@@ -537,7 +531,7 @@ export default function ReviewQueue({
                   <p className="text-xs text-gray-500 mb-3">
                     Alt reading (enhanced OCR):{" "}
                     <code className="text-gray-400">
-                      "{currentFlagWord.alternateReading}"
+                      &quot;{currentFlagWord.alternateReading}&quot;
                     </code>{" "}
                     | Confidence: {currentFlagWord.confidence}%
                   </p>
@@ -555,22 +549,22 @@ export default function ReviewQueue({
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Type correct word..."
-                    className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
+                    className="min-h-11 flex-1 rounded-lg border border-gray-600 bg-gray-800 px-4 py-2.5 font-mono text-sm text-white placeholder-gray-500 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     autoFocus
                   />
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex gap-2 mt-3">
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                   <button
                     onClick={skipCurrentWord}
-                    className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-colors"
+                    className="min-h-11 flex-1 rounded-lg bg-gray-800 px-4 py-2 text-sm font-medium text-gray-300 transition hover:-translate-y-0.5 hover:bg-gray-700"
                   >
                     Skip (Tab)
                   </button>
                   <button
                     onClick={confirmCurrentWord}
-                    className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-indigo-500"
                   >
                     Confirm & Next →
                     <kbd className="text-xs bg-indigo-900 px-1.5 py-0.5 rounded">
@@ -587,7 +581,7 @@ export default function ReviewQueue({
                 </p>
                 <button
                   onClick={finishCurrentPage}
-                  className="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="min-h-11 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-green-500"
                 >
                   Save & Go to Next Page →
                 </button>
