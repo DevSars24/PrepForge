@@ -93,9 +93,15 @@ async function fileToBuffer(file: File): Promise<Buffer> {
 // ─── Helper: run confidence scoring via fetch to /api/ocr ──────────────────
 
 async function fetchConfidence(imageBuffer: Buffer): Promise<ConfidenceResult> {
-  // Dynamic import so the server-side Node.js code doesn't run in browser
-  const { scoreConfidence } = await import("./ConfidenceScorer");
-  return scoreConfidence(imageBuffer);
+  const formData = new FormData();
+  formData.append("files", new Blob([new Uint8Array(imageBuffer)], { type: "image/png" }), "answer-sheet.png");
+  formData.append("mode", "confidence");
+
+  const res = await fetch("/api/ocr", { method: "POST", body: formData });
+  const data = (await res.json().catch(() => ({}))) as any;
+  if (!res.ok) throw new Error(data.error || "OCR confidence check failed");
+
+  return data as ConfidenceResult;
 }
 
 // ─── Subcomponents ──────────────────────────────────────────────────────────
@@ -105,7 +111,7 @@ function PipelineStepper({ currentStep }: { currentStep: PipelineStep }) {
   const currentIdx = STEP_ORDER.indexOf(currentStep);
 
   return (
-    <div className="flex items-center gap-0 overflow-x-auto pb-2">
+    <div className="flex snap-x items-center gap-0 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
       {STEPS.map((step, idx) => {
         const stepIdx = STEP_ORDER.indexOf(step.id);
         const isDone = stepIdx < currentIdx;
@@ -114,7 +120,7 @@ function PipelineStepper({ currentStep }: { currentStep: PipelineStep }) {
         return (
           <React.Fragment key={step.id}>
             {/* Step bubble */}
-            <div className="flex flex-col items-center shrink-0">
+            <div className="flex shrink-0 snap-start flex-col items-center">
               <div
                 className={`
                   w-10 h-10 rounded-full flex items-center justify-center text-lg
@@ -193,8 +199,7 @@ export default function HandwritingDashboard() {
 
   // ─── Step 1: Handle file upload ─────────────────────────────────────
 
-  const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
       const files = Array.from(e.target.files ?? []);
       if (!files.length) return;
 
@@ -222,7 +227,7 @@ export default function HandwritingDashboard() {
       );
 
       const student: UploadedStudent = {
-        roll: studentRoll || `ROLL-${Date.now()}`,
+        roll: studentRoll || "ROLL-PENDING",
         name: studentName || "Unknown Student",
         pages,
       };
@@ -300,14 +305,11 @@ export default function HandwritingDashboard() {
         setStep("reviewing");
         addLog(`Sending ${reviewItems.length} page(s) to teacher review queue.`);
       }
-    },
-    [studentName, studentRoll, addLog]
-  );
+  }
 
   // ─── After teacher clears review queue ────────────────────────────────
 
-  const handleReviewComplete = useCallback(
-    async (reviewResults: PageReviewResult[]) => {
+  async function handleReviewComplete(reviewResults: PageReviewResult[]) {
       addLog(`Teacher review complete. ${reviewResults.reduce((s, r) => s + r.corrections.length, 0)} corrections made.`);
       setStep("regrading");
 
@@ -322,14 +324,11 @@ export default function HandwritingDashboard() {
       }));
 
       await runGrading(currentStudent, mergedPages);
-    },
-    [students, addLog]
-  );
+  }
 
   // ─── Run AI grading via existing /api/evaluate ────────────────────────
 
-  const runGrading = useCallback(
-    async (student: UploadedStudent, pages: ProcessedPage[]) => {
+  async function runGrading(student: UploadedStudent, pages: ProcessedPage[]) {
       setStep("regrading");
       addLog("Sending corrected text to AI grading pipeline…");
 
@@ -422,9 +421,7 @@ export default function HandwritingDashboard() {
       setFairnessData(reportData);
       setStep("report");
       addLog("✅ Pipeline complete. Fairness report ready.");
-    },
-    [addLog]
-  );
+  }
 
   // ─── Reset ────────────────────────────────────────────────────────────
 
@@ -471,27 +468,27 @@ export default function HandwritingDashboard() {
 
   // ─── Render: Main Dashboard ────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen overflow-x-hidden bg-gray-950 text-white">
       {/* ── Top header ──────────────────────────────────────────────────── */}
-      <div className="bg-gray-900/80 border-b border-gray-800 px-6 py-5">
+      <div className="bg-gray-900/80 border-b border-gray-800 px-4 py-5 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-3 mb-1">
             <span className="text-3xl">✍️</span>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-xl font-bold text-white sm:text-2xl">
               Handwriting Fairness System
             </h1>
           </div>
-          <p className="text-gray-400 text-sm ml-12">
+          <p className="text-sm text-gray-400 sm:ml-12">
             Auto-enhance → Dual-OCR confidence → Teacher review → AI grading →
             Audit report
           </p>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-8">
 
         {/* ── Pipeline Stepper ─────────────────────────────────────────── */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-4 shadow-lg transition hover:border-gray-700 sm:p-5">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
             Pipeline Progress
           </h2>
@@ -521,13 +518,13 @@ export default function HandwritingDashboard() {
 
         {/* ── Upload form (shown when idle or after reset) ─────────────── */}
         {(step === "idle" || step === "upload") && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
+          <div className="space-y-5 rounded-2xl border border-gray-800 bg-gray-900 p-4 shadow-lg transition hover:border-gray-700 sm:p-6">
             <h2 className="text-lg font-semibold text-white">
               Start New Evaluation
             </h2>
 
             {/* Student meta */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">
                   Student Name
@@ -537,7 +534,7 @@ export default function HandwritingDashboard() {
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
                   placeholder="e.g. Aryan Sharma"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
@@ -549,7 +546,7 @@ export default function HandwritingDashboard() {
                   value={studentRoll}
                   onChange={(e) => setStudentRoll(e.target.value)}
                   placeholder="e.g. JEE-2026-042"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -561,7 +558,7 @@ export default function HandwritingDashboard() {
               </label>
               <label
                 htmlFor="hw-file-input"
-                className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-700 hover:border-indigo-500 rounded-xl cursor-pointer transition-colors bg-gray-800/40 hover:bg-indigo-500/5"
+                className="flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-700 bg-gray-800/40 transition hover:-translate-y-0.5 hover:border-indigo-500 hover:bg-indigo-500/5"
               >
                 <span className="text-4xl mb-2">📂</span>
                 <p className="text-sm text-gray-400">
@@ -586,7 +583,7 @@ export default function HandwritingDashboard() {
 
         {/* ── Page cards (shown during / after processing) ─────────────── */}
         {students.length > 0 && step !== "idle" && step !== "report" && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
+          <div className="space-y-4 rounded-2xl border border-gray-800 bg-gray-900 p-4 shadow-lg transition hover:border-gray-700 sm:p-5">
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
               Pages ({students[0].pages.length})
             </h2>
@@ -594,7 +591,7 @@ export default function HandwritingDashboard() {
               {students[0].pages.map((page, idx) => (
                 <div
                   key={page.id}
-                  className="flex gap-3 bg-gray-800/60 rounded-xl p-3 border border-gray-700"
+                  className="flex gap-3 rounded-xl border border-gray-700 bg-gray-800/60 p-3 transition hover:-translate-y-0.5 hover:border-gray-600"
                 >
                   {/* Thumbnail */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -648,7 +645,7 @@ export default function HandwritingDashboard() {
             {step !== "regrading" && (
               <button
                 onClick={handleReset}
-                className="text-xs text-gray-600 hover:text-gray-400 underline mt-2"
+                className="mt-2 min-h-10 rounded-lg px-2 text-xs text-gray-600 underline transition hover:bg-gray-800 hover:text-gray-400"
               >
                 Cancel & start over
               </button>
@@ -658,7 +655,7 @@ export default function HandwritingDashboard() {
 
         {/* ── Activity Log ────────────────────────────────────────────────── */}
         {log.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <div className="rounded-2xl border border-gray-800 bg-gray-900 p-4 shadow-lg transition hover:border-gray-700 sm:p-5">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Pipeline Log
             </h2>
@@ -674,7 +671,7 @@ export default function HandwritingDashboard() {
 
         {/* ── Legend (shown in idle state) ────────────────────────────────── */}
         {step === "idle" && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             {[
               {
                 zone: "green",
@@ -698,7 +695,7 @@ export default function HandwritingDashboard() {
                 badge: "text-red-300",
               },
             ].map((z) => (
-              <div key={z.zone} className={`border rounded-2xl p-4 ${z.color}`}>
+              <div key={z.zone} className={`rounded-2xl border p-4 transition hover:-translate-y-0.5 ${z.color}`}>
                 <span className={`text-xs font-bold uppercase tracking-wider ${z.badge}`}>
                   {z.zone}
                 </span>

@@ -810,6 +810,11 @@ export default function EvaluatePage() {
                                 <span style={{ textTransform: "capitalize", fontWeight: 600, color: "var(--text-tertiary)", marginTop: 2 }}>
                                   Action: {page.recommendation.replace(/_/g, " ")}
                                 </span>
+                                {page.reason && (
+                                  <span style={{ color: page.needsReview ? "#ef4444" : "var(--text-secondary)", marginTop: 4, display: "block", fontSize: "0.72rem", borderTop: "1px dashed var(--border)", paddingTop: 4 }}>
+                                    <strong>Audit Feedback:</strong> {page.reason}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ))}

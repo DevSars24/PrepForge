@@ -146,6 +146,7 @@ export async function POST(req: Request) {
           flaggedWordCount: r.confResult.flaggedWordCount,
           redWordCount: r.confResult.redWordCount,
           recommendation: r.confResult.recommendation,
+          reason: r.confResult.reason,
         }));
       }
     }

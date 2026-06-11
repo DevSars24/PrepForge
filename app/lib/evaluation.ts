@@ -85,6 +85,7 @@ export type EvaluationResult = {
     flaggedWordCount: number;
     redWordCount: number;
     recommendation: "auto_grade" | "ai_grade_with_flag" | "teacher_review_first";
+    reason?: string;
   }[];
 };
 

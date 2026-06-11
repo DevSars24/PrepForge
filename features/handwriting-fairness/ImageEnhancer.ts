@@ -20,6 +20,8 @@
 
 import { Jimp } from "jimp";
 
+type JimpImage = Awaited<ReturnType<typeof Jimp.read>>;
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface EnhancementComparison {
@@ -107,7 +109,7 @@ export async function getClarityScore(imageBuffer: Buffer): Promise<number> {
  * (all four neighbours agree), replace it with the neighbour average.
  * This removes single-pixel specks without blurring strokes.
  */
-function applyNoiseRemoval(img: any): any {
+function applyNoiseRemoval(img: JimpImage): JimpImage {
   const w = img.width;
   const h = img.height;
   const clone = img.clone();
@@ -185,7 +187,7 @@ export async function enhanceImage(
   // ── Step D: Noise Removal ───────────────────────────────────────────────
   // Removes isolated ink specks and scanner artifacts without blurring
   // actual handwritten strokes.
-  let processed: any = img;
+  let processed: JimpImage = img;
   if (removeNoise) {
     processed = applyNoiseRemoval(img);
   }
@@ -194,7 +196,7 @@ export async function enhanceImage(
   // Enlarge 1.5× so that small handwriting produces glyphs that are big
   // enough for the OCR model to reliably recognize letterforms.
   // Jimp.AUTO keeps the aspect ratio locked on the height axis.
-  processed.resize(processed.width * scaleFactor, -1);
+  processed.resize({ w: Math.round(processed.width * scaleFactor) });
 
   // Return as PNG (lossless, preserves the sharp black/white boundary)
   return Buffer.from(await processed.getBuffer("image/png"));
