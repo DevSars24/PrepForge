@@ -28,3 +28,7 @@ Thumbs.db
 dev.db
 # clerk configuration (can include secrets)
 /.clerk/
+# local scratch and temp files
+/scratch/
+__pycache__/
+*.pyc
