@@ -1,5 +1,6 @@
 import { gradeWithGemini, mapAiGradingToResult } from "@/lib/ai-grading";
 import { hasGeminiKey } from "@/lib/gemini";
+import { hasGroqKey } from "@/lib/groq";
 import { evaluateLocally, students, type Student } from "@/lib/evaluation";
 import { errorResponse, normalizeError } from "@/lib/debug";
 
@@ -17,15 +18,15 @@ export async function POST(req: Request) {
     const answerText = body.answerText?.trim() || student.answerText;
     const rubricText = body.rubricText?.trim() || "Award step-wise marks using standard JEE/NEET rubric.";
 
-    if (!hasGeminiKey()) {
+    if (!hasGroqKey() && !hasGeminiKey()) {
       const local = evaluateLocally(student, answerText);
       return Response.json({
         ...local,
-        warning: "GEMINI_API_KEY missing. Returned local fallback grading.",
+        warning: "No AI keys configured (GROQ_API_KEY or GEMINI_API_KEY). Returned local fallback grading.",
       });
     }
 
-    const { grading, retrievalStage } = await gradeWithGemini({
+    const { grading, retrievalStage, providerUsed } = await gradeWithGemini({
       student,
       answerText,
       rubricText,
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
       mapAiGradingToResult(grading, student, {
         retrievalStage,
         ocrUsed: Boolean(body.ocrUsed),
+        providerUsed,
       })
     );
   } catch (error) {

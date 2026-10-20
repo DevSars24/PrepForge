@@ -1,7 +1,9 @@
-import { geminiGenerateJson, geminiGenerateText, imagePart } from "@/lib/gemini";
+import { geminiGenerateJson, geminiGenerateText, imagePart, FLASH_MODEL, hasGeminiKey } from "@/lib/gemini";
 import { mistralOCR, hasMistralKey } from "@/lib/mistralOCR";
 import { getTopRubricChunks, hasHfToken } from "@/lib/hfEmbeddings";
 import { generateAnalysis } from "@/lib/hfAnalysis";
+import { hasGroqKey, groqGenerateJson } from "@/lib/groq";
+import { parseDocumentWithMarker, hasMarkerKey } from "@/lib/marker";
 import type { EvaluationResult, Student, Stream } from "@/lib/evaluation";
 import { SchemaType, type Schema } from "@google/generative-ai";
 import { PrepForgeError, logDebugError, normalizeError } from "@/lib/debug";
@@ -188,7 +190,28 @@ async function retrieveRubricContext(answerText: string, rubricText: string): Pr
 export async function ocrAnswerSheets(images: ImageInput[]): Promise<string> {
   if (!images.length) return "";
 
-  // Use Mistral OCR if available (preferred — better for handwriting + PDFs)
+  // 1. PRIMARY ENGINE: Datalab Marker (Deep LaTeX math, tables, bilingual Hindi+English layout)
+  if (hasMarkerKey()) {
+    try {
+      const results = await Promise.all(
+        images.map(async (img) => {
+          const buffer = Buffer.from(img.base64, "base64");
+          const parsed = await parseDocumentWithMarker(
+            buffer,
+            img.name || (img.mimeType === "application/pdf" ? "sheet.pdf" : "sheet.png"),
+            img.mimeType
+          );
+          return parsed.markdown;
+        })
+      );
+      const combined = results.filter(Boolean).join("\n\n---\n\n");
+      if (combined.trim()) return combined;
+    } catch (markerErr) {
+      console.warn("[PrepForge] Marker engine failed, falling back to Mistral OCR:", markerErr);
+    }
+  }
+
+  // 2. SECONDARY ENGINE: Mistral OCR (for quick document/handwriting scanning)
   if (hasMistralKey()) {
     try {
       const results = await Promise.all(
@@ -201,7 +224,7 @@ export async function ocrAnswerSheets(images: ImageInput[]): Promise<string> {
     }
   }
 
-  // Fallback: Gemini Vision OCR
+  // 3. TERTIARY FALLBACK: Gemini Vision OCR
   try {
     const parts = images.map((img) => imagePart(img.base64, img.mimeType));
     const prompt = `You are an expert OCR system for handwritten academic answer sheets.
@@ -219,7 +242,7 @@ Do NOT paraphrase or interpret — transcribe faithfully.`;
   throw new PrepForgeError({
     kind: "gemini_error",
     component: "ocrAnswerSheets",
-    message: "No OCR provider available or all providers failed. Set MISTRAL_API_KEY or GEMINI_API_KEY in .env.",
+    message: "No OCR provider available or all providers failed. Set DATALAB_API_KEY, MISTRAL_API_KEY, or GEMINI_API_KEY in .env.",
     statusCode: 503,
   });
 }
@@ -278,7 +301,7 @@ export async function gradeWithGemini(params: {
   answerText: string;
   rubricText: string;
   stream: Stream;
-}): Promise<{ grading: AiGradingPayload; rubricContext: string; retrievalStage: string }> {
+}): Promise<{ grading: AiGradingPayload; rubricContext: string; retrievalStage: string; providerUsed: string }> {
   const rubricContext = await retrieveRubricContext(params.answerText, params.rubricText);
   const retrievalStage = params.rubricText.length > 6000 ? "EMBED_RAG" : "FULL_RUBRIC";
 
@@ -329,19 +352,81 @@ SCORING RULES:
 - strengths should list topics where the student demonstrated mastery.
 - weaknesses should list specific missing steps or errors.
 
-Return JSON matching the response schema.`.trim();
+Return a valid JSON object strictly matching this schema:
+{
+  "stepGrades": [
+    {
+      "rubricId": string,
+      "topic": string,
+      "expected": string,
+      "awarded": number,
+      "max": number,
+      "confidence": number,
+      "status": "earned" | "partial" | "review",
+      "reasoning": string,
+      "note": string,
+      "evidenceQuote": string,
+      "citationSource": string
+    }
+  ],
+  "strengths": string[],
+  "weaknesses": string[],
+  "topicGaps": string[],
+  "recommendations": string[],
+  "summary": string,
+  "overallConfidence": number
+}`.trim();
 
-  const grading = await geminiGenerateJson<AiGradingPayload>(prompt, [], aiGradingSchema);
-  if (!Array.isArray(grading.stepGrades) || typeof grading.summary !== "string") {
-    throw new PrepForgeError({
-      kind: "invalid_response",
-      component: "gradeWithGemini",
-      message: "Gemini grading response did not match the expected stepGrades/summary shape.",
-      response: grading,
-    });
+  // 1. PRIMARY ROUTE: Groq high-speed inference (Llama 3 / GPT-OSS 120B)
+  if (hasGroqKey()) {
+    try {
+      const groqRes = await groqGenerateJson<AiGradingPayload>(prompt, {
+        systemPrompt: "You are the PrepForge Faculty Evaluation AI. Return valid JSON only with chain-of-thought grading.",
+      });
+
+      if (Array.isArray(groqRes.data.stepGrades) && typeof groqRes.data.summary === "string") {
+        return {
+          grading: groqRes.data,
+          rubricContext,
+          retrievalStage,
+          providerUsed: `Groq (${groqRes.modelUsed})`,
+        };
+      }
+    } catch (groqErr) {
+      console.warn(
+        "[PrepForge:ai-grading] Groq CoT grading failed, triggering failover to Gemini:",
+        groqErr instanceof Error ? groqErr.message : groqErr
+      );
+    }
   }
-  return { grading, rubricContext, retrievalStage };
+
+  // 2. FALLBACK ROUTE: Google Gemini Generative AI
+  if (hasGeminiKey()) {
+    try {
+      const grading = await geminiGenerateJson<AiGradingPayload>(prompt, [], aiGradingSchema);
+      if (Array.isArray(grading.stepGrades) && typeof grading.summary === "string") {
+        return {
+          grading,
+          rubricContext,
+          retrievalStage,
+          providerUsed: `Google Gemini (${FLASH_MODEL})`,
+        };
+      }
+    } catch (geminiErr) {
+      console.warn("[PrepForge:ai-grading] Gemini fallback also failed:", geminiErr);
+      throw geminiErr;
+    }
+  }
+
+  throw new PrepForgeError({
+    kind: "invalid_response",
+    component: "gradeWithGemini",
+    message: "No AI provider succeeded for CoT grading. Verify GROQ_API_KEY or GEMINI_API_KEY.",
+    statusCode: 503,
+  });
 }
+
+export const gradeWithMultiModelRouting = gradeWithGemini;
 
 // ---------------------------------------------------------------------------
 // Map AI grading → EvaluationResult
@@ -350,7 +435,7 @@ Return JSON matching the response schema.`.trim();
 export function mapAiGradingToResult(
   grading: AiGradingPayload,
   student: Student,
-  meta: { retrievalStage: string; ocrUsed: boolean }
+  meta: { retrievalStage: string; ocrUsed: boolean; providerUsed?: string }
 ): EvaluationResult {
   const stepGrades = (grading.stepGrades || []).map((grade) => ({
     rubricId: grade.rubricId || "STEP",
@@ -392,6 +477,7 @@ export function mapAiGradingToResult(
       ? grading.recommendations
       : ["Review NCERT basics for flagged topics."],
     retrievalTrace: [
+      { stage: "MODEL_ROUTER", detail: `Multi-Model Routing: Evaluated via ${meta.providerUsed || "Groq (Fast Routing) with Gemini Fallback"}` },
       { stage: "INGEST", detail: meta.ocrUsed ? "Answer sheet processed with multi-provider OCR (Mistral → Gemini Vision)." : "Typed answer text used." },
       { stage: "RAG", detail: meta.retrievalStage === "EMBED_RAG" ? "Rubric chunks retrieved with semantic embeddings." : "Full rubric passed to grader." },
       { stage: "COT_GRADE", detail: "Chain-of-Thought grading: model reasons step-by-step before scoring each rubric point." },

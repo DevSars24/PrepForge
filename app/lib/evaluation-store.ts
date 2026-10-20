@@ -92,8 +92,8 @@ export async function saveEvaluationRecord(params: {
   result: EvaluationResult;
   fileUrls?: string[];
 }) {
-  try {
-    if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL) {
+    try {
       const prisma = await getPrisma();
       return await prisma.evaluationRecord.create({
         data: {
@@ -111,30 +111,35 @@ export async function saveEvaluationRecord(params: {
           fileUrls: params.fileUrls || [],
         },
       });
-    } else {
-      const localRec: LocalEvaluationRecord = {
-        id: crypto.randomUUID(),
-        studentName: params.student.name,
-        studentRoll: params.student.roll,
-        stream: params.student.stream,
-        subject: params.student.subject,
-        mode: "descriptive",
-        answerText: params.answerText,
-        rubricText: params.rubricText,
-        score: params.result.score,
-        total: params.result.total,
-        confidence: params.result.confidence,
-        resultJson: params.result,
-        fileUrls: params.fileUrls || [],
-        createdAt: new Date().toISOString(),
-      };
-      const history = await getLocalHistory();
-      history.evaluations.unshift(localRec);
-      await saveLocalHistory(history);
-      return localRec;
+    } catch (dbError) {
+      console.warn("[PrepForge:store] Prisma DB save failed, falling back to local history:", dbError instanceof Error ? dbError.message : dbError);
     }
+  }
+
+  // Local fallback
+  try {
+    const localRec: LocalEvaluationRecord = {
+      id: crypto.randomUUID(),
+      studentName: params.student.name,
+      studentRoll: params.student.roll,
+      stream: params.student.stream,
+      subject: params.student.subject,
+      mode: "descriptive",
+      answerText: params.answerText,
+      rubricText: params.rubricText,
+      score: params.result.score,
+      total: params.result.total,
+      confidence: params.result.confidence,
+      resultJson: params.result,
+      fileUrls: params.fileUrls || [],
+      createdAt: new Date().toISOString(),
+    };
+    const history = await getLocalHistory();
+    history.evaluations.unshift(localRec);
+    await saveLocalHistory(history);
+    return localRec;
   } catch (error) {
-    console.error("Failed to save evaluation:", error);
+    console.error("Failed to save evaluation locally:", error);
     return null;
   }
 }
@@ -145,8 +150,8 @@ export async function saveOmrRecord(params: {
   result: CustomOmrResult;
   fileUrls?: string[];
 }) {
-  try {
-    if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL) {
+    try {
       const prisma = await getPrisma();
       return await prisma.omrRecord.create({
         data: {
@@ -159,41 +164,46 @@ export async function saveOmrRecord(params: {
           fileUrls: params.fileUrls || [],
         },
       });
-    } else {
-      const localRec: LocalOmrRecord = {
-        id: crypto.randomUUID(),
-        answerKey: params.answerKey,
-        responses: params.responses,
-        score: params.result.score,
-        total: params.result.total,
-        accuracy: params.result.accuracy,
-        resultJson: params.result,
-        fileUrls: params.fileUrls || [],
-        createdAt: new Date().toISOString(),
-      };
-      const history = await getLocalHistory();
-      history.omrRecords.unshift(localRec);
-      await saveLocalHistory(history);
-      return localRec;
+    } catch (dbError) {
+      console.warn("[PrepForge:store] Prisma DB OMR save failed, falling back to local history:", dbError instanceof Error ? dbError.message : dbError);
     }
+  }
+
+  // Local fallback
+  try {
+    const localRec: LocalOmrRecord = {
+      id: crypto.randomUUID(),
+      answerKey: params.answerKey,
+      responses: params.responses,
+      score: params.result.score,
+      total: params.result.total,
+      accuracy: params.result.accuracy,
+      resultJson: params.result,
+      fileUrls: params.fileUrls || [],
+      createdAt: new Date().toISOString(),
+    };
+    const history = await getLocalHistory();
+    history.omrRecords.unshift(localRec);
+    await saveLocalHistory(history);
+    return localRec;
   } catch (error) {
-    console.error("Failed to save OMR record:", error);
+    console.error("Failed to save OMR record locally:", error);
     return null;
   }
 }
 
 export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> {
-  try {
-    if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL) {
+    try {
       const prisma = await getPrisma();
-      const evs = await prisma.evaluationRecord.findMany({
+      const evs = (await prisma.evaluationRecord.findMany({
         orderBy: { createdAt: "desc" },
         take: limit,
-      }) as DbEvaluationRecord[];
-      const omrs = await prisma.omrRecord.findMany({
+      })) as DbEvaluationRecord[];
+      const omrs = (await prisma.omrRecord.findMany({
         orderBy: { createdAt: "desc" },
         take: limit,
-      }) as DbOmrRecord[];
+      })) as DbOmrRecord[];
 
       const evsMapped: HistoryItem[] = evs.map((ev) => ({
         id: ev.id,
@@ -236,94 +246,109 @@ export async function listRecentEvaluations(limit = 30): Promise<HistoryItem[]> 
       return [...evsMapped, ...omrsMapped]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, limit);
-    } else {
-      const history = await getLocalHistory();
-
-      const evsMapped: HistoryItem[] = history.evaluations.map((ev) => ({
-        id: ev.id,
-        type: "descriptive",
-        title: `${ev.studentName} (${ev.stream})`,
-        subtitle: `${ev.subject} - Roll: ${ev.studentRoll}`,
-        score: ev.score,
-        total: ev.total,
-        createdAt: ev.createdAt,
-        resultJson: {
-          ...ev.resultJson,
-          student: {
-            name: ev.studentName,
-            roll: ev.studentRoll,
-            stream: ev.stream,
-            subject: ev.subject,
-            answerText: ev.answerText,
-            omr: [],
-          },
-          answerText: ev.answerText,
-          rubricText: ev.rubricText || "",
-        },
-      }));
-
-      const omrsMapped: HistoryItem[] = history.omrRecords.map((omr) => ({
-        id: omr.id,
-        type: "omr",
-        title: `OMR Check - ${omr.total / 4} Questions`,
-        subtitle: `Accuracy: ${omr.accuracy}% - Score: ${omr.score}/${omr.total}`,
-        score: omr.score,
-        total: omr.total,
-        createdAt: omr.createdAt,
-        resultJson: {
-          ...omr.resultJson,
-          answerKey: omr.answerKey,
-          responses: omr.responses,
-        },
-      }));
-
-      return [...evsMapped, ...omrsMapped]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, limit);
+    } catch (dbError) {
+      console.warn("[PrepForge:store] Prisma DB fetch failed, falling back to local history:", dbError instanceof Error ? dbError.message : dbError);
     }
+  }
+
+  // Local fallback
+  try {
+    const history = await getLocalHistory();
+
+    const evsMapped: HistoryItem[] = history.evaluations.map((ev) => ({
+      id: ev.id,
+      type: "descriptive",
+      title: `${ev.studentName} (${ev.stream})`,
+      subtitle: `${ev.subject} - Roll: ${ev.studentRoll}`,
+      score: ev.score,
+      total: ev.total,
+      createdAt: ev.createdAt,
+      resultJson: {
+        ...ev.resultJson,
+        student: {
+          name: ev.studentName,
+          roll: ev.studentRoll,
+          stream: ev.stream,
+          subject: ev.subject,
+          answerText: ev.answerText,
+          omr: [],
+        },
+        answerText: ev.answerText,
+        rubricText: ev.rubricText || "",
+      },
+    }));
+
+    const omrsMapped: HistoryItem[] = history.omrRecords.map((omr) => ({
+      id: omr.id,
+      type: "omr",
+      title: `OMR Check - ${omr.total / 4} Questions`,
+      subtitle: `Accuracy: ${omr.accuracy}% - Score: ${omr.score}/${omr.total}`,
+      score: omr.score,
+      total: omr.total,
+      createdAt: omr.createdAt,
+      resultJson: {
+        ...omr.resultJson,
+        answerKey: omr.answerKey,
+        responses: omr.responses,
+      },
+    }));
+
+    return [...evsMapped, ...omrsMapped]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
   } catch (error) {
-    console.error("Failed to list history:", error);
+    console.error("Failed to list history locally:", error);
     return [];
   }
 }
 
 export async function deleteHistoryItem(id: string, type: "descriptive" | "omr") {
-  try {
-    if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL) {
+    try {
       const prisma = await getPrisma();
       if (type === "descriptive") {
         await prisma.evaluationRecord.delete({ where: { id } });
       } else {
         await prisma.omrRecord.delete({ where: { id } });
       }
-    } else {
-      const history = await getLocalHistory();
-      if (type === "descriptive") {
-        history.evaluations = history.evaluations.filter((x) => x.id !== id);
-      } else {
-        history.omrRecords = history.omrRecords.filter((x) => x.id !== id);
-      }
-      await saveLocalHistory(history);
+      return true;
+    } catch (dbError) {
+      console.warn("[PrepForge:store] Prisma DB delete failed, falling back to local history:", dbError instanceof Error ? dbError.message : dbError);
     }
+  }
+
+  try {
+    const history = await getLocalHistory();
+    if (type === "descriptive") {
+      history.evaluations = history.evaluations.filter((x) => x.id !== id);
+    } else {
+      history.omrRecords = history.omrRecords.filter((x) => x.id !== id);
+    }
+    await saveLocalHistory(history);
     return true;
   } catch (error) {
-    console.error("Failed to delete history item:", error);
+    console.error("Failed to delete history item locally:", error);
     return false;
   }
 }
 
 export async function clearAllHistory() {
-  try {
-    if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_URL) {
+    try {
       const prisma = await getPrisma();
       await prisma.evaluationRecord.deleteMany();
       await prisma.omrRecord.deleteMany();
-    } else {
-      await saveLocalHistory({ evaluations: [], omrRecords: [] });
+      return true;
+    } catch (dbError) {
+      console.warn("[PrepForge:store] Prisma DB clear failed, falling back to local history:", dbError instanceof Error ? dbError.message : dbError);
     }
+  }
+
+  try {
+    await saveLocalHistory({ evaluations: [], omrRecords: [] });
     return true;
   } catch (error) {
-    console.error("Failed to clear history:", error);
+    console.error("Failed to clear history locally:", error);
     return false;
   }
 }

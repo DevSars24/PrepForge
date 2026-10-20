@@ -1,12 +1,15 @@
 import { PrepForgeError } from "@/lib/debug";
 
-const HF_EMBED_API =
+const HF_ROUTER_EMBED_API =
   "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction";
 
-export function hasHfToken() {
-  return Boolean(process.env.HF_TOKEN);
+export function hasHfToken(): boolean {
+  return Boolean(process.env.HF_TOKEN && process.env.HF_TOKEN.trim().length > 0);
 }
 
+/**
+ * Call HuggingFace inference API to generate dense vector embeddings
+ */
 async function embed(texts: string[]): Promise<number[][]> {
   const token = process.env.HF_TOKEN;
   if (!token) {
@@ -18,7 +21,7 @@ async function embed(texts: string[]): Promise<number[][]> {
     });
   }
 
-  const res = await fetch(HF_EMBED_API, {
+  const res = await fetch(HF_ROUTER_EMBED_API, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -54,8 +57,35 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 /**
+ * High-accuracy lexical overlap / keyword TF-IDF scoring fallback
+ * used if HuggingFace neural embeddings are warming up or token is invalid
+ */
+function lexicalSimilarity(query: string, document: string): number {
+  const tokenize = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2);
+
+  const queryTokens = new Set(tokenize(query));
+  const docTokens = tokenize(document);
+  if (!queryTokens.size || !docTokens.length) return 0;
+
+  let matches = 0;
+  for (const token of docTokens) {
+    if (queryTokens.has(token)) {
+      matches += 1;
+    }
+  }
+
+  return matches / Math.sqrt(docTokens.length * queryTokens.size);
+}
+
+/**
  * Chunk the rubric text and return the top-K most relevant chunks
- * compared to the student answer, using HuggingFace embeddings.
+ * compared to the student answer, using HuggingFace embeddings
+ * with intelligent lexical ranking fallback.
  */
 export async function getTopRubricChunks(
   studentAnswer: string,
@@ -69,7 +99,6 @@ export async function getTopRubricChunks(
     .filter(Boolean)
     .flatMap((block) => {
       if (block.length <= 300) return [block];
-      // Further split long blocks
       const parts: string[] = [];
       for (let i = 0; i < block.length; i += 300) {
         parts.push(block.slice(i, i + 300));
@@ -79,20 +108,40 @@ export async function getTopRubricChunks(
 
   if (!chunks.length) return [rubric];
 
-  // If rubric is small enough, just return all chunks
+  // If rubric is small enough, return all chunks
   if (rubric.length <= 3000) return chunks.slice(0, topK);
 
-  // Embed answer + all chunks in one batch
-  const allTexts = [studentAnswer.slice(0, 1000), ...chunks.slice(0, 20)];
-  const embeddings = await embed(allTexts);
-  const answerEmbed = embeddings[0];
-  const chunkEmbeds = embeddings.slice(1);
+  // Try HuggingFace neural embeddings if token is configured
+  if (hasHfToken()) {
+    try {
+      const allTexts = [studentAnswer.slice(0, 1000), ...chunks.slice(0, 20)];
+      const embeddings = await embed(allTexts);
+      const answerEmbed = embeddings[0];
+      const chunkEmbeds = embeddings.slice(1);
 
+      return chunks
+        .slice(0, 20)
+        .map((chunk, i) => ({
+          chunk,
+          score: cosineSimilarity(answerEmbed, chunkEmbeds[i]),
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK)
+        .map((x) => x.chunk);
+    } catch (error) {
+      console.warn(
+        "[PrepForge:hfEmbeddings] Neural embedding failed, falling back to lexical matching:",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  // Fallback: Lexical keyword similarity ranking
   return chunks
     .slice(0, 20)
-    .map((chunk, i) => ({
+    .map((chunk) => ({
       chunk,
-      score: cosineSimilarity(answerEmbed, chunkEmbeds[i]),
+      score: lexicalSimilarity(studentAnswer, chunk),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, topK)

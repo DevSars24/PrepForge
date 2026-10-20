@@ -2,7 +2,9 @@ import { gradeWithGemini, mapAiGradingToResult, ocrAnswerSheets } from "@/lib/ai
 import { saveEvaluationRecord } from "@/lib/evaluation-store";
 import { fileToBase64, hasGeminiKey, isSupportedScanMimeType } from "@/lib/gemini";
 import { hasMistralKey } from "@/lib/mistralOCR";
+import { hasGroqKey } from "@/lib/groq";
 import { generateAnalysis } from "@/lib/hfAnalysis";
+import { classifySubjectDomain } from "@/lib/hfClassification";
 import { evaluateLocally, type Student } from "@/lib/evaluation";
 import { uploadEvaluationFile } from "@/lib/supabase";
 import { logDebugError, normalizeError } from "@/lib/debug";
@@ -85,11 +87,11 @@ export async function POST(req: Request) {
     const validFiles = files;
     const validCriteriaFiles = criteriaFiles;
 
-    if (!hasGeminiKey() && !hasMistralKey()) {
+    if (!hasGroqKey() && !hasGeminiKey() && !hasMistralKey()) {
       const local = evaluateLocally(student, `${answerText}\n${rubricText}`);
       return Response.json({
         ...local,
-        warning: "No AI API keys configured. Set GEMINI_API_KEY and/or MISTRAL_API_KEY. Get free keys at https://aistudio.google.com/apikey and https://console.mistral.ai/",
+        warning: "No AI API keys configured. Set GROQ_API_KEY, GEMINI_API_KEY, and/or MISTRAL_API_KEY in .env.",
       });
     }
 
@@ -113,7 +115,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { grading, retrievalStage } = await gradeWithGemini({
+    const { grading, retrievalStage, providerUsed } = await gradeWithGemini({
       student,
       answerText,
       rubricText: rubricText || "Award step-wise marks for JEE/NEET descriptive answers.",
@@ -123,15 +125,20 @@ export async function POST(req: Request) {
     const result = mapAiGradingToResult(grading, student, {
       retrievalStage,
       ocrUsed,
+      providerUsed,
     });
 
-    // Generate HF strengths/gaps analysis (non-blocking — if it fails, we skip it)
-    let hfAnalysis: string | undefined;
-    try {
-      hfAnalysis = await generateAnalysis(result as unknown as Record<string, unknown>);
-    } catch (err) {
-      console.warn("[PrepForge] HF analysis failed, skipping:", err);
-    }
+    // Run HF Domain Classification and Counselor Analysis in parallel
+    const [hfAnalysisResult, domainClassification] = await Promise.all([
+      generateAnalysis(result as unknown as Record<string, unknown>).catch((err) => {
+        console.warn("[PrepForge] HF counselor analysis failed:", err);
+        return undefined;
+      }),
+      classifySubjectDomain(answerText, student.stream).catch((err) => {
+        console.warn("[PrepForge] HF subject classification failed:", err);
+        return undefined;
+      }),
+    ]);
 
     const fileUrls = (
       await Promise.all([
@@ -150,7 +157,9 @@ export async function POST(req: Request) {
 
     return Response.json({
       ...result,
-      hfAnalysis,
+      hfAnalysis: hfAnalysisResult,
+      domainClassification,
+      providerUsed,
       savedId: saved?.id,
       fileUrls,
     });
