@@ -1,12 +1,8 @@
-import path from "path";
+import type { NextConfig } from "next";
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   // Prisma kept as external (won't error even if Prisma imports exist but aren't called)
-  serverExternalPackages: ['@prisma/client'],
-
-  // Fix workspace root warning (multiple lockfiles detected)
-  outputFileTracingRoot: path.join(process.cwd(), "../"),
+  serverExternalPackages: ["@prisma/client"],
 };
 
 export default nextConfig;
