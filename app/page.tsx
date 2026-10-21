@@ -538,13 +538,7 @@ export default function CleanPremiumLanding() {
           ───────────────────────────────────────────────────────────────────── */}
       <section
         ref={heroRef}
-        style={{
-          paddingTop: "144px",
-          paddingBottom: "96px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full"
+        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full pt-28 pb-16 sm:pt-36 sm:pb-24 px-4 sm:px-6 md:px-8"
       >
         {/* Ambient glow blobs */}
         <div
@@ -569,7 +563,7 @@ export default function CleanPremiumLanding() {
           {/* Word-by-word H1 */}
           <h1
             ref={h1Ref}
-            className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0F172A] leading-[1.2] mb-6 max-w-3xl w-full"
+            className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0F172A] leading-[1.2] mb-6 max-w-3xl w-full"
             style={{ perspective: "600px" }}
           >
             {heroWords.map((word, i) => (
@@ -587,7 +581,7 @@ export default function CleanPremiumLanding() {
           <p
             ref={subRef}
             style={{ opacity: 0 }}
-            className="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed mb-10 w-full"
+            className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed mb-10 w-full"
           >
             Streamline step-by-step descriptive exam marking and bubble-sheet
             verification. Grade handwriting with citation audits, map conceptual
@@ -602,7 +596,7 @@ export default function CleanPremiumLanding() {
           >
             <Link
               href={consoleHref}
-              className="group relative px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-base shadow-[0_4px_14px_rgba(124,58,237,0.28)] hover:shadow-[0_8px_28px_rgba(124,58,237,0.4)] transition-all flex items-center gap-2 overflow-hidden cursor-pointer"
+              className="group relative w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-base shadow-[0_4px_14px_rgba(124,58,237,0.28)] hover:shadow-[0_8px_28px_rgba(124,58,237,0.4)] transition-all flex items-center justify-center gap-2 overflow-hidden cursor-pointer"
               style={{ transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)" }}
             >
               <span className="relative z-10">Open Faculty Console</span>
@@ -615,7 +609,7 @@ export default function CleanPremiumLanding() {
             </Link>
             <Link
               href="#features"
-              className="px-8 py-4 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-xl font-bold text-base shadow-sm transition-all cursor-pointer hover:-translate-y-0.5"
+              className="w-full sm:w-auto text-center px-6 sm:px-8 py-3.5 sm:py-4 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-xl font-bold text-base shadow-sm transition-all cursor-pointer hover:-translate-y-0.5"
               style={{ transition: "all 0.2s ease" }}
             >
               Explore Features
@@ -628,13 +622,7 @@ export default function CleanPremiumLanding() {
           2. FEATURES
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        style={{
-          paddingTop: "96px",
-          paddingBottom: "96px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="max-w-7xl mx-auto border-t border-slate-100 bg-white w-full"
+        className="max-w-7xl mx-auto border-t border-slate-100 bg-white w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
         id="features"
       >
         <div className="section-heading text-center max-w-2xl mx-auto mb-16 w-full" style={{ opacity: 0 }}>
@@ -730,13 +718,7 @@ export default function CleanPremiumLanding() {
           3. BEFORE / AFTER
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        style={{
-          paddingTop: "96px",
-          paddingBottom: "96px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="bg-slate-50/60 border-t border-b border-slate-100 w-full"
+        className="bg-slate-50/60 border-t border-b border-slate-100 w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto w-full">
           <div
@@ -848,7 +830,7 @@ export default function CleanPremiumLanding() {
                   ))}
                 </ul>
               </div>
-              <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between w-full">
+              <div className="mt-6 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 w-full">
                 <p className="text-xs text-slate-400">
                   Processing speed average: 180 documents per minute.
                 </p>
@@ -872,13 +854,7 @@ export default function CleanPremiumLanding() {
           4. HOW IT WORKS
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        style={{
-          paddingTop: "96px",
-          paddingBottom: "96px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="bg-white w-full"
+        className="bg-white w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
         id="workflow"
       >
         <div className="max-w-7xl mx-auto w-full">
@@ -896,12 +872,12 @@ export default function CleanPremiumLanding() {
 
           <div
             ref={stepsGridRef}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 w-full"
           >
             {stepsList.map((step, idx) => (
               <div
                 key={idx}
-                className="step-card group bg-white border border-slate-200 p-8 rounded-2xl flex flex-col justify-between"
+                className="step-card group bg-white border border-slate-200 p-6 sm:p-8 rounded-2xl flex flex-col justify-between"
                 style={{
                   opacity: 0,
                   transition: "border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease",
@@ -944,16 +920,10 @@ export default function CleanPremiumLanding() {
           5. STATISTICS — count-up
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        style={{
-          paddingTop: "80px",
-          paddingBottom: "80px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="bg-slate-50/60 border-t border-b border-slate-100 w-full"
+        className="bg-slate-50/60 border-t border-b border-slate-100 w-full py-14 sm:py-20 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 text-center w-full">
             <StatItem
               target={99.2}
               suffix="%"
@@ -982,13 +952,7 @@ export default function CleanPremiumLanding() {
           6. TESTIMONIALS
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        style={{
-          paddingTop: "96px",
-          paddingBottom: "96px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="bg-white w-full"
+        className="bg-white w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
         id="testimonials"
       >
         <div className="max-w-7xl mx-auto w-full">
@@ -1011,7 +975,7 @@ export default function CleanPremiumLanding() {
             {testimonialsList.map((t, i) => (
               <div
                 key={i}
-                className="testi-card group border border-slate-200/80 p-8 md:p-10 rounded-2xl bg-white shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] flex flex-col justify-between cursor-default"
+                className="testi-card group border border-slate-200/80 p-6 sm:p-8 md:p-10 rounded-2xl bg-white shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] flex flex-col justify-between cursor-default"
                 style={{
                   opacity: 0,
                   transition: "border-color 0.25s ease, box-shadow 0.25s ease, transform 0.3s ease",
@@ -1058,13 +1022,7 @@ export default function CleanPremiumLanding() {
           7. PRICING — enlarged cards
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        style={{
-          paddingTop: "112px",
-          paddingBottom: "112px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="bg-slate-50/60 border-t border-b border-slate-100 w-full"
+        className="bg-slate-50/60 border-t border-b border-slate-100 w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
         id="pricing"
       >
         <div className="max-w-7xl mx-auto w-full">
@@ -1333,13 +1291,7 @@ export default function CleanPremiumLanding() {
           8. FAQ
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        style={{
-          paddingTop: "96px",
-          paddingBottom: "96px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="max-w-4xl mx-auto bg-white w-full"
+        className="max-w-4xl mx-auto bg-white w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
         id="faq"
       >
         <div
@@ -1370,13 +1322,7 @@ export default function CleanPremiumLanding() {
           9. FOOTER
           ───────────────────────────────────────────────────────────────────── */}
       <footer
-        style={{
-          paddingTop: "64px",
-          paddingBottom: "64px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
-        }}
-        className="bg-white max-w-7xl mx-auto border-t border-slate-100 w-full"
+        className="bg-white max-w-7xl mx-auto border-t border-slate-100 w-full py-12 sm:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="flex flex-col md:flex-row justify-between items-start gap-8 pb-12 mb-8 w-full">
           <div>

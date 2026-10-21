@@ -469,14 +469,14 @@ export default function EvaluatePage() {
         )}
 
         {/* Console Dashboard Flex Container */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* Active Student Details Banner */}
-          <div className="result-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24, borderLeft: "4px solid var(--accent)", padding: "20px 24px", margin: 0 }}>
-            <div style={{ flex: 1, minWidth: "260px" }}>
+          <div className="result-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, borderLeft: "4px solid var(--accent)", padding: "18px 20px", margin: 0 }}>
+            <div style={{ flex: "1 1 240px", minWidth: 0 }}>
               <p style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--accent)" }}>Currently Evaluating</p>
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: 2 }}>{studentName || "Configure Student Details"}</h2>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.5 }}>
+              <h2 style={{ fontSize: "1.3rem", fontWeight: 800, marginTop: 2, wordBreak: "break-word" }}>{studentName || "Configure Student Details"}</h2>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.5, wordBreak: "break-word" }}>
                 Roll: <strong>{rollNumber || "N/A"}</strong> | Stream: <strong>{stream}</strong> | Subject: <strong>{subject || "General"}</strong>
                 {batch && <> | Batch: <strong>{batch}</strong></>}
                 {section && <> | Sec: <strong>{section}</strong></>}
@@ -484,22 +484,22 @@ export default function EvaluatePage() {
               </p>
             </div>
             
-            <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-              <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ background: "var(--bg-surface)", padding: "8px 14px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "90px" }}>
+            <div className="w-full sm:w-auto" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 10, flex: "1 1 auto", justifyContent: "flex-start" }}>
+                <div style={{ background: "var(--bg-surface)", padding: "8px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "80px", flex: "1 1 0" }}>
                   <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 650 }}>Descriptive</p>
-                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{result.score}/100</p>
+                  <p style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{result.score}/100</p>
                 </div>
-                <div style={{ background: "var(--bg-surface)", padding: "8px 14px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "90px" }}>
+                <div style={{ background: "var(--bg-surface)", padding: "8px 12px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", textAlign: "center", minWidth: "80px", flex: "1 1 0" }}>
                   <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 650 }}>OMR score</p>
-                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{omrResult.score}/{omrResult.total}</p>
+                  <p style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--accent)", marginTop: 1 }}>{omrResult.score}/{omrResult.total}</p>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowConfigModal(true)}
-                className="btn-primary animate-fade"
-                style={{ padding: "10px 18px", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
+                className="btn-primary animate-fade w-full sm:w-auto"
+                style={{ padding: "10px 16px", fontSize: "0.88rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer" }}
               >
                 <UserCheck size={14} />
                 Configure Details
@@ -509,17 +509,17 @@ export default function EvaluatePage() {
 
           {/* Student Configurator Modal overlay */}
           {showConfigModal && (
-            <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.3)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-              <div className="student-form-card" style={{ maxWidth: "480px", width: "100%", margin: 0, position: "relative", boxShadow: "var(--shadow-lg)", border: "1px solid var(--border)", background: "var(--bg-card)", padding: 24, borderRadius: "var(--radius-lg)" }}>
+            <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+              <div className="student-form-card" style={{ maxWidth: "480px", width: "100%", maxHeight: "90vh", overflowY: "auto", margin: 0, position: "relative", boxShadow: "var(--shadow-lg)", border: "1px solid var(--border)", background: "var(--bg-card)", padding: 20, borderRadius: "var(--radius-lg)" }}>
                 <button
                   onClick={() => setShowConfigModal(false)}
-                  style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)" }}
+                  style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)" }}
                   aria-label="Close modal"
                 >
                   <X size={18} />
                 </button>
                 
-                <h2 style={{ fontSize: "1.2rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <UserCheck size={18} style={{ color: "var(--accent)" }} />
                   Student Configurator
                 </h2>
@@ -536,7 +536,7 @@ export default function EvaluatePage() {
                       value={studentName}
                       onChange={(e) => setStudentName(e.target.value)}
                       placeholder="Enter student name"
-                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                     />
                   </div>
 
@@ -548,11 +548,11 @@ export default function EvaluatePage() {
                       value={rollNumber}
                       onChange={(e) => setRollNumber(e.target.value)}
                       placeholder="e.g. JES-2026-004"
-                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                     />
                   </div>
 
-                  <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10, display: "grid" }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="form-group">
                       <label htmlFor="student-batch">Batch</label>
                       <input
@@ -561,7 +561,7 @@ export default function EvaluatePage() {
                         value={batch}
                         onChange={(e) => setBatch(e.target.value)}
                         placeholder="e.g. Batch-A"
-                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                       />
                     </div>
                     <div className="form-group">
@@ -572,7 +572,7 @@ export default function EvaluatePage() {
                         value={section}
                         onChange={(e) => setSection(e.target.value)}
                         placeholder="e.g. Sec-1"
-                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                       />
                     </div>
                   </div>
@@ -585,18 +585,18 @@ export default function EvaluatePage() {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="e.g. Physics"
-                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                      style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                     />
                   </div>
 
-                  <div className="form-grid" style={{ gridTemplateColumns: "1fr 1.2fr", gap: 10, display: "grid" }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="form-group">
                       <label htmlFor="student-stream">Stream Focus</label>
                       <select
                         id="student-stream"
                         value={stream}
                         onChange={(e) => setStream(e.target.value as Stream)}
-                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                       >
                         <option value="JEE">JEE</option>
                         <option value="NEET">NEET</option>
@@ -610,7 +610,7 @@ export default function EvaluatePage() {
                         value={examType}
                         onChange={(e) => setExamType(e.target.value)}
                         placeholder="e.g. Mains Mock"
-                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                       />
                     </div>
                   </div>
@@ -766,7 +766,7 @@ export default function EvaluatePage() {
                       />
                     </div>
 
-                    <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="form-group">
                         <label htmlFor="omr-key">OMR Answer Key</label>
                         <input
@@ -961,7 +961,7 @@ function OmrDashboard({ result }: { result: CustomOmrResult }) {
     <div className="space-y-4">
       <div className="result-card">
         <h3>OMR Performance Audit</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5">
           {[
             ["Correct", result.correct, "var(--success-soft)", "var(--success)"],
             ["Wrong", result.wrong, "var(--error-soft)", "var(--error)"],
@@ -1115,7 +1115,7 @@ function StepGrades({
 // Strengths, gaps, and action item dashboard block
 function GapDashboard({ result }: { result: EvaluationResult }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: 16 }}>
       
       <div className="result-card" style={{ margin: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -1211,7 +1211,7 @@ function RecentEvaluationsList({
             className="w-full text-left p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] hover:border-[var(--accent)] hover:bg-[var(--bg-card-hover)] transition-all flex flex-col gap-1"
           >
             <div className="flex justify-between items-start gap-2">
-              <span className="font-semibold text-xs text-[var(--text-primary)] truncate" style={{ maxWidth: "160px" }}>
+              <span className="font-semibold text-xs text-[var(--text-primary)] truncate flex-1 min-w-0">
                 {item.title}
               </span>
               <span className="font-bold text-xs text-[var(--accent)] shrink-0">
@@ -1241,16 +1241,16 @@ function ReportPreview({
   return (
     <div className="result-card" style={{ background: "var(--bg-card)", color: "var(--text-primary)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, borderBottom: "1px solid var(--border)", paddingBottom: 20, marginBottom: 20 }}>
-        <div>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <p style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--accent)" }}>
             PrepForge Evaluation Report
           </p>
-          <h2 style={{ fontSize: "1.75rem", fontWeight: 800, marginTop: 4 }}>{student.name}</h2>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 2 }}>
+          <h2 style={{ fontSize: "1.6rem", fontWeight: 800, marginTop: 4, wordBreak: "break-word" }}>{student.name}</h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 2, wordBreak: "break-word" }}>
             Roll: {student.roll} | Stream: {student.stream} | Subject: {student.subject} {student.batch && `| Batch: ${student.batch}`}
           </p>
         </div>
-        <div style={{ background: "var(--accent-soft)", padding: "12px 20px", borderRadius: "var(--radius-md)", textAlign: "right", border: "1px solid var(--border-accent)" }}>
+        <div className="w-full sm:w-auto" style={{ background: "var(--accent-soft)", padding: "12px 20px", borderRadius: "var(--radius-md)", textAlign: "left", border: "1px solid var(--border-accent)" }}>
           <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--accent)", lineHeight: 1 }}>
             {result.score}/100
           </p>
@@ -1265,7 +1265,7 @@ function ReportPreview({
         <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>{result.summary}</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: 16 }}>
         <div style={{ background: "var(--bg-surface)", padding: 16, borderRadius: "var(--radius-md)" }}>
           <h5 style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--success)", marginBottom: 8 }}>Strengths</h5>
           <ul style={{ paddingLeft: 16, fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
@@ -1314,7 +1314,7 @@ function FileList({ files, onRemove }: { files: UploadedFile[]; onRemove: (index
     <div className="file-list">
       {files.map((file, index) => (
         <div key={`${file.name}-${index}`} className="file-item">
-          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: 1, overflow: "hidden" }}>
             <FileText size={14} style={{ color: "var(--accent)", flexShrink: 0 }} />
             <span className="file-item-name truncate">{file.name}</span>
           </div>
