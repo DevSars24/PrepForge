@@ -225,7 +225,7 @@ export default function DescriptiveResultCards({
             </span>
           </div>
 
-          <div style={{ height: 20, width: 1, background: "var(--border)" }} />
+          <div className="hidden sm:block" style={{ height: 20, width: 1, background: "var(--border)" }} />
 
           {/* Section-wise scores */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -572,8 +572,8 @@ export default function DescriptiveResultCards({
                 border: "1px solid var(--border)",
               }}
             >
-              <div style={{ fontSize: "0.82rem", display: "flex", gap: 8, alignItems: "baseline" }}>
-                <span style={{ fontWeight: 700, color: "var(--text-tertiary)", minWidth: 95 }}>
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 text-[0.82rem]">
+                <span className="font-bold text-[var(--text-tertiary)] shrink-0 sm:min-w-[95px]">
                   Student wrote:
                 </span>
                 <span
@@ -587,8 +587,8 @@ export default function DescriptiveResultCards({
                 </span>
               </div>
 
-              <div style={{ fontSize: "0.82rem", display: "flex", gap: 8, alignItems: "baseline" }}>
-                <span style={{ fontWeight: 700, color: "var(--text-tertiary)", minWidth: 95 }}>
+              <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 text-[0.82rem]">
+                <span className="font-bold text-[var(--text-tertiary)] shrink-0 sm:min-w-[95px]">
                   Expected:
                 </span>
                 <span
