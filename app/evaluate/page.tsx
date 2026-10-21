@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
   AlertTriangle,
@@ -15,12 +14,10 @@ import {
   Loader2,
   MessageSquareText,
   ScanLine,
-  ShieldCheck,
   Sparkles,
   Upload,
   X,
   Trash2,
-  RefreshCw,
   UserCheck,
 } from "lucide-react";
 import {
@@ -35,6 +32,9 @@ import {
 } from "@/lib/evaluation";
 import type { DebugError } from "@/lib/debug";
 import Navbar from "@/components/Navbar";
+import DescriptiveResultCards from "@/components/DescriptiveResultCards";
+import { sanitizeMathRecursive } from "@/lib/sanitizeMath";
+import { verifyAndApplyNumericGuardrails } from "@/lib/verifyNumeric";
 import gsap from "gsap";
 
 type Workspace = "descriptive" | "omr" | "insights" | "report" | "history";
@@ -133,12 +133,18 @@ export default function EvaluatePage() {
   };
 
   useEffect(() => {
-    fetchHistory();
+    const timer = setTimeout(() => {
+      void fetchHistory();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
     if (workspace === "history") {
-      fetchHistory();
+      timer = setTimeout(() => {
+        void fetchHistory();
+      }, 0);
     }
     // Fade in transition on workspace change
     gsap.fromTo(
@@ -146,6 +152,9 @@ export default function EvaluatePage() {
       { opacity: 0, y: 10 },
       { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
     );
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [workspace]);
 
 
@@ -305,7 +314,47 @@ export default function EvaluatePage() {
       
       setAnswerText(savedStudent?.answerText || String(item.resultJson.answerText || ""));
       setMarkingCriteria(String(item.resultJson.rubricText || criteriaText));
-      setResult(item.resultJson as unknown as EvaluationResult);
+      
+      const rawRes = item.resultJson as unknown as EvaluationResult;
+      const sanitized = sanitizeMathRecursive(rawRes);
+      // Run math verifier guardrails on loaded records (e.g. Q20 and Q21)
+      if (Array.isArray(sanitized.stepGrades)) {
+        sanitized.stepGrades = sanitized.stepGrades.map((sg) => {
+          const verified = verifyAndApplyNumericGuardrails({
+            question_no: sg.question_no || sg.rubricId,
+            section: sg.section || "Section B",
+            topic: sg.topic,
+            marks_awarded: sg.awarded,
+            marks_max: sg.max,
+            rubric_breakdown: sg.rubric_breakdown || [],
+            errors: sg.errors || [],
+            feedback: sg.note || "",
+            student_final_answer: sg.student_final_answer || sg.citations?.[0]?.excerpt || "",
+            expected_final_answer: sg.expected_final_answer || sg.expected || "",
+            confidence: sg.confidence,
+            needs_review: sg.needs_review || false,
+            reasoning: sg.reasoning || "",
+            citations: sg.citations,
+          });
+          return {
+            ...sg,
+            question_no: verified.question_no,
+            awarded: verified.marks_awarded,
+            max: verified.marks_max,
+            rubric_breakdown: verified.rubric_breakdown,
+            errors: verified.errors,
+            note: verified.feedback,
+            feedback: verified.feedback,
+            needs_review: verified.needs_review,
+            confidence: verified.confidence,
+          };
+        });
+        const totalAwarded = sanitized.stepGrades.reduce((sum, g) => sum + g.awarded, 0);
+        const totalMax = Math.max(1, sanitized.stepGrades.reduce((sum, g) => sum + g.max, 0));
+        sanitized.score = Math.round((totalAwarded / totalMax) * 100);
+      }
+
+      setResult(sanitized);
       setStatusNote(`Loaded descriptive evaluation for ${savedStudent?.name || item.title} from history.`);
       setWorkspace("insights");
     } else {
@@ -755,7 +804,11 @@ export default function EvaluatePage() {
                     <p className="text-sm text-slate-500 mb-6">
                       AI evaluated marks per rubric point, backed by semantic citations and step verification.
                     </p>
-                    <StepGrades result={result} />
+                    <StepGrades
+                      result={result}
+                      onUpdateResult={setResult}
+                      teacherName={user?.fullName || "Faculty Teacher"}
+                    />
                   </div>
 
                   {/* Syllabus Gap Analysis */}
@@ -1020,57 +1073,22 @@ function OmrDashboard({ result }: { result: CustomOmrResult }) {
   );
 }
 
-// StepWise detailed Grades
-function StepGrades({ result }: { result: EvaluationResult }) {
+// StepWise detailed Grades with full guardrails & readable cards
+function StepGrades({
+  result,
+  onUpdateResult,
+  teacherName,
+}: {
+  result: EvaluationResult;
+  onUpdateResult?: (updated: EvaluationResult) => void;
+  teacherName?: string;
+}) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {result.stepGrades.map((grade) => (
-        <div key={grade.rubricId} className="step-grade">
-          <div className="step-grade-header">
-            <span className="step-grade-topic">{grade.topic}</span>
-            <span className={`step-grade-score ${grade.status}`}>
-              {grade.awarded}/{grade.max}
-            </span>
-          </div>
-
-          <p style={{ fontSize: "0.82rem", color: "var(--text-tertiary)", marginBottom: 8 }}>
-            <strong>Expected:</strong> {grade.expected}
-          </p>
-
-          {grade.reasoning && (
-            <div className="step-grade-reasoning">
-              <span style={{ fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
-                Chain-of-Thought Grading
-              </span>
-              {grade.reasoning}
-            </div>
-          )}
-
-          <p className="step-grade-note">{grade.note}</p>
-
-          {grade.citations && grade.citations.length > 0 && (
-            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-              {grade.citations.map((citation) => (
-                <p key={citation.id} className="step-grade-evidence" title={citation.excerpt}>
-                  &ldquo;{citation.excerpt}&rdquo; &mdash; <strong>{citation.source}</strong> (line {citation.line})
-                </p>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-      {result.aiText && (
-        <div style={{ background: "var(--accent-soft)", border: "1px solid var(--border-accent)", borderRadius: "var(--radius-md)", padding: 16, fontSize: "0.88rem", lineHeight: 1.6 }}>
-          <strong>Faculty Feedback Summary:</strong>
-          <p style={{ marginTop: 4, color: "var(--text-secondary)" }}>{result.aiText}</p>
-        </div>
-      )}
-      {result.warning && (
-        <div className="warning-banner" style={{ margin: 0 }}>
-          {result.warning}
-        </div>
-      )}
-    </div>
+    <DescriptiveResultCards
+      result={result}
+      onUpdateResult={onUpdateResult}
+      teacherName={teacherName}
+    />
   );
 }
 
