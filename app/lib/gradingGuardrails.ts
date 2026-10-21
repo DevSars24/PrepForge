@@ -1,6 +1,10 @@
 import type { QuestionGrading, GradingResponse } from "./gradingSchema";
 import { sanitizeMath, sanitizeMathRecursive } from "./sanitizeMath";
-import { verifyAndApplyNumericGuardrails } from "./verifyNumeric";
+import {
+  verifyAndApplyNumericGuardrails,
+  parseNumericValue,
+  isWithinTolerance,
+} from "./verifyNumeric";
 
 /**
  * Normalize text for grounded quote matching:
@@ -13,6 +17,37 @@ export function normalizeForQuoteMatch(text: string): string {
   s = s.replace(/[^a-z0-9]/g, " ");
   s = s.replace(/\s+/g, " ");
   return s.trim();
+}
+
+/**
+ * Filter out false error records where student wrote the expected answer
+ */
+export function isFalseDeductionError(studentWrote: string, expected: string): boolean {
+  if (!studentWrote || !expected) return false;
+
+  const normStudent = normalizeForQuoteMatch(studentWrote);
+  const normExpected = normalizeForQuoteMatch(expected);
+
+  // Exact normalized match (e.g. "i_1 = 2.5A" vs "i_1 = 2.5A")
+  if (normStudent && normExpected && normStudent === normExpected) {
+    return true;
+  }
+
+  // Pure numeric value check within 2%
+  const sNum = parseNumericValue(studentWrote);
+  const eNum = parseNumericValue(expected);
+  if (sNum !== null && eNum !== null && isWithinTolerance(sNum, eNum, 0.02)) {
+    return true;
+  }
+
+  // Substring match if one contains the other and numeric value is present
+  if (normStudent && normExpected && (normStudent.includes(normExpected) || normExpected.includes(normStudent))) {
+    if (sNum !== null && eNum !== null && isWithinTolerance(sNum, eNum, 0.02)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -58,11 +93,19 @@ export function checkDeductionValidity(q: QuestionGrading): {
     return { valid: true, needsRetry: false };
   }
 
-  if (!q.errors || q.errors.length === 0) {
+  const realErrors = (q.errors || []).filter((err) => !isFalseDeductionError(err.student_wrote, err.expected));
+
+  if (realErrors.length === 0) {
+    // If student answers match expected, no retry needed
+    const sNum = parseNumericValue(q.student_final_answer);
+    const eNum = parseNumericValue(q.expected_final_answer);
+    if (sNum !== null && eNum !== null && isWithinTolerance(sNum, eNum, 0.02)) {
+      return { valid: true, needsRetry: false };
+    }
     return {
       valid: false,
       needsRetry: true,
-      reason: `Marks deducted for ${q.question_no} (${q.marks_awarded}/${q.marks_max}) but errors[] is empty. A concrete step, what the student wrote, and what was expected are required.`,
+      reason: `Marks deducted for ${q.question_no} (${q.marks_awarded}/${q.marks_max}) but errors[] is empty or contains non-divergent steps. A concrete deviation is required.`,
     };
   }
 
@@ -78,7 +121,7 @@ export function checkDeductionValidity(q: QuestionGrading): {
     );
   };
 
-  for (const err of q.errors) {
+  for (const err of realErrors) {
     if (isVague(err.step) || isVague(err.expected) || !err.student_wrote) {
       return {
         valid: false,
@@ -105,6 +148,11 @@ export function applyGuardrailsToQuestion(
   options?: { ocrUsed?: boolean; unclearOcr?: boolean }
 ): QuestionGrading {
   let q = sanitizeMathRecursive(rawQuestion);
+
+  // Filter out any false deduction error records
+  if (q.errors && q.errors.length > 0) {
+    q.errors = q.errors.filter((err) => !isFalseDeductionError(err.student_wrote, err.expected));
+  }
 
   // 1. Quote Grounding
   if (transcript && q.citations && q.citations.length > 0) {

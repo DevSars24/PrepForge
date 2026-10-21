@@ -1,5 +1,6 @@
 import { hasGroqKey, groqGenerateJson } from "@/lib/groq";
 import { hasGeminiKey, geminiGenerateJson } from "@/lib/gemini";
+import type { Stream } from "@/lib/evaluation";
 
 const HF_ZERO_SHOT_API =
   "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli";
@@ -11,6 +12,14 @@ export type DomainClassification = {
   suggestedChapters: string[];
   providerUsed: string;
 };
+
+const BOARDS_CANDIDATE_LABELS = [
+  "Physics: Mechanics, Current Electricity & Optics",
+  "Chemistry: Physical, Organic & Inorganic",
+  "Mathematics: Calculus, Vectors & 3D Geometry",
+  "Biology: Reproduction, Genetics & Ecology",
+  "General Sciences & English Core",
+];
 
 const JEE_CANDIDATE_LABELS = [
   "Classical Mechanics & Newton's Laws",
@@ -41,9 +50,14 @@ const NEET_CANDIDATE_LABELS = [
  */
 export async function classifySubjectDomain(
   text: string,
-  stream: "JEE" | "NEET" = "JEE"
+  stream: Stream = "Boards"
 ): Promise<DomainClassification> {
-  const candidateLabels = stream === "JEE" ? JEE_CANDIDATE_LABELS : NEET_CANDIDATE_LABELS;
+  const candidateLabels =
+    stream === "Boards"
+      ? BOARDS_CANDIDATE_LABELS
+      : stream === "NEET"
+      ? NEET_CANDIDATE_LABELS
+      : JEE_CANDIDATE_LABELS;
   const token = process.env.HF_TOKEN;
 
   // 1. Try Hugging Face Zero-Shot Classification

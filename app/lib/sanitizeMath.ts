@@ -102,6 +102,12 @@ export function sanitizeMath(input: string | null | undefined): string {
   text = text.replace(/\\+rho\b/g, "ρ");
   text = text.replace(/\\+epsilon\b/g, "ε");
 
+  // Arrow operators
+  text = text.replace(/\\+(?:rightarrow|to|longrightarrow)\b|\brightarrow\b/gi, "→");
+  text = text.replace(/\\+(?:leftarrow|longleftarrow)\b|\bleftarrow\b/gi, "←");
+  text = text.replace(/\\+(?:leftrightarrow)\b|\bleftrightarrow\b/gi, "↔");
+  text = text.replace(/\\+(?:Rightarrow|Longrightarrow)\b|\bRightarrow\b/g, "⇒");
+
   // Strip remaining isolated LaTeX backslashes
   text = text.replace(/\\([a-zA-Z]+)/g, "$1");
 
@@ -113,12 +119,75 @@ export function sanitizeMath(input: string | null | undefined): string {
 
   // 7. Clean up redundant spaces around operators
   text = text.replace(/\s+/g, " ");
-  text = text.replace(/\s*([×÷·≠≤≥±])\s*/g, " $1 ");
+  text = text.replace(/\s*([×÷·≠≤≥±→←↔⇒])\s*/g, " $1 ");
   text = text.replace(/\(\s+/g, "(");
   text = text.replace(/\s+\)/g, ")");
   text = text.replace(/\s*\/\s*/g, " / ");
 
   return text.trim();
+}
+
+/**
+ * Sanitizes and cleans OCR or typed transcripts:
+ * - Strips strike-through / cancelled text inside <del>...</del>
+ * - Strips HTML markup like <math>, </math>, <u>, </u>, <span>, etc.
+ * - Removes ASCII table borders and fences (---|---|---, ---||||||---)
+ * - Formats piped question columns into clean sequential lines
+ * - Sanitizes LaTeX / scientific math into crisp Unicode
+ */
+export function cleanTranscriptText(raw: string | null | undefined): string {
+  if (!raw || typeof raw !== "string") return "";
+
+  let text = raw;
+
+  // 1. Remove text inside <del>...</del> (cancelled answers on paper)
+  text = text.replace(/<del>[\s\S]*?<\/del>/gi, "");
+
+  // 2. Strip HTML tags like <math>, </math>, <u>, </u>, etc.
+  text = text.replace(/<\/?(?:math|u|b|i|span|div|p|sub|sup)[^>]*>/gi, "");
+
+  // 3. Remove ASCII table border lines like:
+  // ---|---|--- or ---||||||||||--- or |---|---|
+  text = text.replace(/^[-\s|:+]{3,}$/gm, "");
+  text = text.replace(/-{3,}[|+-]*-{3,}/g, "");
+  text = text.replace(/\|{2,}/g, " | ");
+
+  // 4. Split pipe-separated question items (e.g. "| 1) ... | 2) ... | 3) ...") into clean lines
+  const lines = text.split("\n");
+  const processedLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // If it's just table decoration characters, skip it
+    if (/^[|\-+: ]+$/.test(trimmed)) continue;
+
+    // Check if line contains pipes separating numbered questions e.g. "| 1) ... | 2) ... |"
+    if (trimmed.includes("|") && /\b\d+[\).]/.test(trimmed)) {
+      const parts = trimmed.split("|").map((p) => p.trim()).filter(Boolean);
+      for (const part of parts) {
+        if (!/^[|\-+: ]+$/.test(part)) {
+          processedLines.push(part);
+        }
+      }
+    } else {
+      // Strip leading/trailing pipes if present
+      const cleanLine = trimmed.replace(/^\|\s*/, "").replace(/\s*\|$/, "").trim();
+      if (cleanLine && !/^[|\-+: ]+$/.test(cleanLine)) {
+        processedLines.push(cleanLine);
+      }
+    }
+  }
+
+  text = processedLines.join("\n");
+
+  // 5. Apply standard math and arrow sanitization
+  text = sanitizeMath(text);
+
+  // 6. Normalise whitespace & blank lines
+  text = text.replace(/\n{3,}/g, "\n\n").trim();
+
+  return text;
 }
 
 /**
@@ -140,3 +209,4 @@ export function sanitizeMathRecursive<T>(val: T): T {
   }
   return val;
 }
+
