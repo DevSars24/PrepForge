@@ -34,7 +34,7 @@ import {
 import type { DebugError } from "@/lib/debug";
 import Navbar from "@/components/Navbar";
 import DescriptiveResultCards from "@/components/DescriptiveResultCards";
-import { sanitizeMathRecursive } from "@/lib/sanitizeMath";
+import { sanitizeMathRecursive, cleanTranscriptText } from "@/lib/sanitizeMath";
 import { verifyAndApplyNumericGuardrails } from "@/lib/verifyNumeric";
 import gsap from "gsap";
 
@@ -179,12 +179,17 @@ export default function EvaluatePage() {
     setStatusNote(null);
     setDebugError(null);
 
+    const cleanedAnswer = cleanTranscriptText(answerText);
+    if (cleanedAnswer && cleanedAnswer !== answerText) {
+      setAnswerText(cleanedAnswer);
+    }
+
     const currentStudent: Student = {
       name: studentName.trim(),
       roll: rollNumber.trim(),
       stream: stream,
       subject: subject.trim(),
-      answerText: answerText,
+      answerText: cleanedAnswer || answerText,
       omr: omrResponseText ? omrResponseText.trim().split(/\s+/) : [],
       batch: batch.trim() || undefined,
       examType: examType.trim() || undefined,
@@ -193,12 +198,12 @@ export default function EvaluatePage() {
 
     try {
       // Immediate local result check as fallback/first glance
-      const local = evaluateLocally(currentStudent, `${answerText}\n${markingCriteria}`);
+      const local = evaluateLocally(currentStudent, `${cleanedAnswer || answerText}\n${markingCriteria}`);
       setResult(local);
 
       const form = new FormData();
       form.append("student", JSON.stringify(currentStudent));
-      form.append("answerText", answerText);
+      form.append("answerText", cleanedAnswer || answerText);
       form.append("rubricText", markingCriteria);
       answerFileRefs.forEach((file) => form.append("answerFiles", file));
       criteriaFileRefs.forEach((file) => form.append("criteriaFiles", file));
@@ -598,8 +603,9 @@ export default function EvaluatePage() {
                         onChange={(e) => setStream(e.target.value as Stream)}
                         style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: "100%", boxSizing: "border-box" }}
                       >
-                        <option value="JEE">JEE</option>
-                        <option value="NEET">NEET</option>
+                        <option value="Boards">Boards (CBSE / State)</option>
+                        <option value="JEE">JEE (Mains & Advanced)</option>
+                        <option value="NEET">NEET (UG Medical)</option>
                       </select>
                     </div>
                     <div className="form-group">
@@ -696,13 +702,50 @@ export default function EvaluatePage() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="answer-transcript">Typed / OCR Answer Transcript</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <label htmlFor="answer-transcript" style={{ margin: 0 }}>Typed / OCR Answer Transcript</label>
+                        {answerText && (
+                          <button
+                            type="button"
+                            onClick={() => setAnswerText(cleanTranscriptText(answerText))}
+                            style={{
+                              fontSize: "0.74rem",
+                              fontWeight: 700,
+                              color: "#4f46e5",
+                              background: "#eef2ff",
+                              border: "1px solid #c7d2fe",
+                              padding: "2px 9px",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                            title="Format OCR tables and sanitize math into clean plain text"
+                          >
+                            ✨ Format & Clean OCR
+                          </button>
+                        )}
+                      </div>
                       <textarea
                         id="answer-transcript"
                         value={answerText}
                         onChange={(e) => setAnswerText(e.target.value)}
-                        placeholder="Paste student transcription here..."
-                        style={{ minHeight: "180px", marginTop: 4 }}
+                        onPaste={(e) => {
+                          const pasted = e.clipboardData.getData("text");
+                          if (pasted && (pasted.includes("<del>") || pasted.includes("<math>") || pasted.includes("---|") || pasted.includes("<u>"))) {
+                            e.preventDefault();
+                            const cleaned = cleanTranscriptText(pasted);
+                            const target = e.currentTarget;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            const current = target.value;
+                            const next = current.substring(0, start) + cleaned + current.substring(end);
+                            setAnswerText(next);
+                          }
+                        }}
+                        placeholder="Paste student transcription here (or upload sheets above)..."
+                        style={{ minHeight: "180px", marginTop: 4, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: "0.84rem" }}
                       />
                     </div>
 

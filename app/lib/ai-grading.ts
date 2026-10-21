@@ -11,7 +11,7 @@ import {
   validateGradingResponse,
   type GradingResponse,
 } from "@/lib/gradingSchema";
-import { sanitizeMath, sanitizeMathRecursive } from "@/lib/sanitizeMath";
+import { sanitizeMathRecursive, cleanTranscriptText } from "@/lib/sanitizeMath";
 import {
   applyGuardrailsToGradingResponse,
   checkDeductionValidity,
@@ -194,6 +194,7 @@ async function retrieveRubricContext(answerText: string, rubricText: string): Pr
   return chunks.slice(0, 6).join("\n\n---\n\n");
 }
 
+
 // ---------------------------------------------------------------------------
 // OCR — multi-provider with Gemini Vision fallback
 // ---------------------------------------------------------------------------
@@ -215,7 +216,7 @@ export async function ocrAnswerSheets(images: ImageInput[]): Promise<string> {
         })
       );
       const combined = results.filter(Boolean).join("\n\n---\n\n");
-      if (combined.trim()) return sanitizeMath(combined);
+      if (combined.trim()) return cleanTranscriptText(combined);
     } catch (markerErr) {
       console.warn("[PrepForge] Marker engine failed, falling back to Mistral OCR:", markerErr);
     }
@@ -227,7 +228,7 @@ export async function ocrAnswerSheets(images: ImageInput[]): Promise<string> {
         images.map((img) => mistralOCR(img.base64, img.mimeType))
       );
       const text = results.filter(Boolean).join("\n\n");
-      if (text.trim()) return sanitizeMath(text);
+      if (text.trim()) return cleanTranscriptText(text);
     } catch (err) {
       console.warn("[PrepForge] Mistral OCR failed, falling back to Gemini Vision:", err);
     }
@@ -243,7 +244,7 @@ If any part is illegible, write [illegible] in place.
 Do NOT paraphrase or interpret — transcribe faithfully.`;
 
     const text = await geminiGenerateText(prompt, parts);
-    if (text.trim()) return sanitizeMath(text);
+    if (text.trim()) return cleanTranscriptText(text);
   } catch (err) {
     console.warn("[PrepForge] Gemini Vision OCR also failed:", err);
   }
@@ -312,7 +313,7 @@ function buildGradingPrompt(params: {
   stream: Stream;
   validationErrorFeedback?: string;
 }): string {
-  return `You are PrepForge Faculty Evaluation AI for ${params.stream} (JEE/NEET).
+  return `You are PrepForge Faculty Evaluation AI for ${params.stream} (Boards/JEE/NEET).
 
 ROLE: Evaluate the student's answer sheet against the marking rubric using step-by-step reasoning and strict guardrails.
 
@@ -324,23 +325,77 @@ ${params.rubricContext}
 STUDENT ANSWER SHEET:
 ${params.answerText}
 
+COMPREHENSIVE FULL-PAPER COVERAGE (CRITICAL MANDATORY INSTRUCTION):
+- You MUST evaluate EVERY single question present in the student answer sheet starting from Question 1 (Q1) sequentially all the way to the end.
+- DO NOT SKIP ANY QUESTIONS! Do NOT start from Q17, Q20, or Q22! Start evaluation at Q1!
+- Answer sheets commonly start with Section A (Multiple Choice Questions / Objective 1-markers, typically Q1 to Q16 or similar).
+  * You MUST evaluate every single Section A question:
+    - "question_no": "Q1", "Q2", "Q3", etc.
+    - "section": "Section A"
+    - "marks_max": 1 (or rubric specified marks)
+    - Compare student's selected option (e.g. (A), (B), (C), (D) or written option text) with the rubric answer key.
+    - If student's option matches rubric key: award 1 mark ("marks_awarded": 1, met: true).
+    - If student's option is wrong: award 0 marks ("marks_awarded": 0), and supply concrete error:
+      { "step": "Option Selection", "student_wrote": "Option (B)", "expected": "Option (D)" }
+  * Do NOT skip Section A questions! Even if they are objective/MCQs written on the paper, evaluate them all in the question list!
+- Follow with Section B (e.g. Q17-Q21, 2 marks each), Section C (e.g. Q22-Q28, 3 marks each), Section D (Case-based / 4 marks), Section E (Long answer / 5 marks):
+  * Perform step-wise evaluation comparing formulas, numerical substitutions, intermediate values, and final answers with units.
+
 MATHEMATICAL NOTATION RULES (CRITICAL):
-- Write all math in plain text/Unicode (e.g. P = I × A, n = P / E, 10^4, n_e = n_i^2 / n_h, m^-3, photons/s).
-- Do NOT use LaTeX commands (\\times, \\frac, \\text, \\cdot) or $...$ delimiters.
-- Use Unicode operators: ×, ÷, ·, ≠, ≤, ≥, ±, ², ³, ⁻¹, ⁻³, etc.
+- Write all math in plain text/Unicode (e.g. P = I × A, n = P / E, 10^4, n_e = n_i^2 / n_h, m^-3, photons/s, →, ←).
+- Do NOT use LaTeX commands (\\times, \\frac, \\text, \\cdot, \\rightarrow) or $...$ delimiters.
+- Use Unicode operators: ×, ÷, ·, ≠, ≤, ≥, ±, ², ³, ⁻¹, ⁻³, →, etc.
 
 GRADING & GUARDRAIL RULES:
 1. IDENTIFY & COMPARE: For each question, compare student steps with rubric criteria.
-2. DEDUCTION RULE: If marks_awarded < marks_max, you MUST supply concrete non-empty errors:
-   { "step": "Specific arithmetic step or formula", "student_wrote": "Exact student text", "expected": "Exact expected value" }
-   NEVER give vague reasons like "calculation errors" or "mistake". If student calculations are numerically correct within 2%, do NOT deduct marks!
-3. RUBRIC BREAKDOWN: Break each question into 2-4 criteria (e.g. Formula, Steps/Substitution, Final Answer & Units) with awarded and max marks.
+2. DEDUCTION RULE & FALSE DEDUCTION PREVENTION (CRITICAL):
+   - If marks_awarded < marks_max, you MUST supply concrete non-empty errors:
+     { "step": "Specific arithmetic step or formula", "student_wrote": "Exact student text", "expected": "Exact expected value" }
+   - ABSOLUTELY NEVER put a step into "errors[]" if what the student wrote is correct or matches the expected value!
+     * For example, if student wrote "i_1 = 2.5A" and expected is "i_1 = 2.5A", DO NOT PUT IT IN ERRORS! That is a correct step!
+     * Only include steps in "errors[]" where the student's work actually contains a mistake or deviation from expected.
+   - If student calculations are numerically correct within 2%, do NOT deduct marks and do NOT add to errors!
+3. RUBRIC BREAKDOWN: Break each question into criteria with awarded and max marks.
 4. CONFIDENCE: Set confidence (0.0 to 1.0). If handwriting or steps are unclear, set needs_review = true.
 5. FEEDBACK: Max 2 clear sentences.
 
 JSON OUTPUT STRUCTURE:
 {
   "questions": [
+    {
+      "question_no": "Q1",
+      "section": "Section A",
+      "topic": "MCQ - Spherical Surfaces",
+      "marks_awarded": 1,
+      "marks_max": 1,
+      "rubric_breakdown": [
+        { "criterion": "Option & Concept: (B) spherical surfaces", "awarded": 1, "max": 1, "met": true }
+      ],
+      "errors": [],
+      "feedback": "Correct option selected.",
+      "student_final_answer": "(B) spherical surfaces",
+      "expected_final_answer": "(B) spherical surfaces",
+      "confidence": 0.98,
+      "needs_review": false,
+      "reasoning": "Student selected option (B) which matches the marking key."
+    },
+    {
+      "question_no": "Q2",
+      "section": "Section A",
+      "topic": "MCQ - Kinetic Energy",
+      "marks_awarded": 1,
+      "marks_max": 1,
+      "rubric_breakdown": [
+        { "criterion": "Option: (B) 1.6 × 10⁻¹⁶ J", "awarded": 1, "max": 1, "met": true }
+      ],
+      "errors": [],
+      "feedback": "Correct option and calculation.",
+      "student_final_answer": "(B) 1.6 × 10⁻¹⁶ J",
+      "expected_final_answer": "(B) 1.6 × 10⁻¹⁶ J",
+      "confidence": 0.98,
+      "needs_review": false,
+      "reasoning": "Option (B) verified against marking key."
+    },
     {
       "question_no": "Q20",
       "section": "Section B",
@@ -360,12 +415,12 @@ JSON OUTPUT STRUCTURE:
       "reasoning": "Student correctly calculated power and photon energy, yielding 1.01e4 photons/s."
     }
   ],
-  "strengths": ["Formula substitution", "Unit notation"],
+  "strengths": ["Option identification", "Formula substitution", "Unit notation"],
   "weaknesses": [],
   "topicGaps": [],
   "recommendations": ["Practice multi-step numerical problems."],
-  "summary": "Overall good attempt with clear steps.",
-  "overallConfidence": 0.9
+  "summary": "Full paper evaluated sequentially from Q1 onwards with step reasoning.",
+  "overallConfidence": 0.95
 }
 ${
   params.validationErrorFeedback

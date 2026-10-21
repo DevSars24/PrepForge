@@ -1,4 +1,4 @@
-export type Stream = "JEE" | "NEET";
+export type Stream = "Boards" | "JEE" | "NEET";
 
 export type UploadedFile = {
   name: string;
