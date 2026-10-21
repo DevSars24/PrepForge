@@ -32,3 +32,5 @@ dev.db
 /scratch/
 __pycache__/
 *.pyc
+*.tsbuildinfo
+prisma/local_history.json
