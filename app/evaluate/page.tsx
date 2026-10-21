@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import {
   AlertTriangle,
@@ -57,7 +58,15 @@ const criteriaText = `Step marking criteria:
 4. Attach every mark to a source citation and answer-line evidence.`;
 
 export default function EvaluatePage() {
-  const { user } = useUser();
+  const { user, isLoaded, isSignedIn } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.replace("/sign-in?redirect_url=/evaluate");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
   const [workspace, setWorkspace] = useState<Workspace>("descriptive");
   const [showConfigModal, setShowConfigModal] = useState(false);
 
@@ -417,6 +426,17 @@ export default function EvaluatePage() {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <main className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+        <p className="text-sm font-semibold text-slate-600">
+          Authenticating Faculty Session...
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground pb-12">

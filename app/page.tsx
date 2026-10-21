@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import {
   FileText,
@@ -307,6 +308,9 @@ function StatItem({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function CleanPremiumLanding() {
+  const { isSignedIn } = useAuth();
+  const consoleHref = isSignedIn ? "/evaluate" : "/sign-in?redirect_url=/evaluate";
+
   const heroRef = useRef<HTMLElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
   const h1Ref = useRef<HTMLHeadingElement>(null);
@@ -597,7 +601,7 @@ export default function CleanPremiumLanding() {
             className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full"
           >
             <Link
-              href="/evaluate"
+              href={consoleHref}
               className="group relative px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-base shadow-[0_4px_14px_rgba(124,58,237,0.28)] hover:shadow-[0_8px_28px_rgba(124,58,237,0.4)] transition-all flex items-center gap-2 overflow-hidden cursor-pointer"
               style={{ transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)" }}
             >
@@ -703,7 +707,7 @@ export default function CleanPremiumLanding() {
                   {feat.icon}
                 </div>
                 <Link
-                  href="/evaluate"
+                  href={consoleHref}
                   className={`text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors ${
                     feat.accent === "orange"
                       ? "text-[#F97316] hover:text-[#EA580C]"
@@ -849,7 +853,7 @@ export default function CleanPremiumLanding() {
                   Processing speed average: 180 documents per minute.
                 </p>
                 <Link
-                  href="/evaluate"
+                  href={consoleHref}
                   className="text-xs font-bold text-[#7C3AED] hover:text-[#6D28D9] flex items-center gap-1 cursor-pointer group"
                 >
                   Launch Console{" "}
@@ -1136,7 +1140,7 @@ export default function CleanPremiumLanding() {
                 </ul>
               </div>
               <Link
-                href="/evaluate"
+                href={consoleHref}
                 className="w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
                 Start Sandbox
@@ -1194,7 +1198,7 @@ export default function CleanPremiumLanding() {
                 </ul>
               </div>
               <Link
-                href="/evaluate"
+                href={consoleHref}
                 className="w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
                 Get Started
@@ -1256,7 +1260,7 @@ export default function CleanPremiumLanding() {
                 </ul>
               </div>
               <Link
-                href="/evaluate"
+                href={consoleHref}
                 className="group/btn relative w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all block cursor-pointer shadow-[0_4px_14px_rgba(124,58,237,0.25)] hover:shadow-[0_8px_20px_rgba(124,58,237,0.38)] overflow-hidden"
               >
                 <span className="relative z-10">Start Free Trial</span>
@@ -1315,7 +1319,7 @@ export default function CleanPremiumLanding() {
                 </ul>
               </div>
               <Link
-                href="/evaluate"
+                href={consoleHref}
                 className="w-full text-center py-2.5 px-4 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 hover:border-orange-200 transition-all block cursor-pointer shadow-sm group-hover:shadow-md"
               >
                 Contact Team
@@ -1399,7 +1403,7 @@ export default function CleanPremiumLanding() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
-                    href="/evaluate"
+                    href={consoleHref}
                     className="text-slate-500 hover:text-[#7C3AED] transition-colors"
                   >
                     Faculty Console
