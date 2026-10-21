@@ -34,6 +34,27 @@ export type Citation = {
   excerpt: string;
 };
 
+export type RubricBreakdownItem = {
+  criterion: string;
+  awarded: number;
+  max: number;
+  met: boolean;
+};
+
+export type GradingErrorItem = {
+  step: string;
+  student_wrote: string;
+  expected: string;
+};
+
+export type TeacherOverride = {
+  original_marks: number;
+  new_marks: number;
+  reason?: string;
+  overridden_at: string;
+  teacher_name?: string;
+};
+
 export type StepGrade = {
   rubricId: string;
   topic: string;
@@ -45,6 +66,16 @@ export type StepGrade = {
   note: string;
   reasoning?: string;
   citations: Citation[];
+  // Guardrail enhancements
+  question_no?: string;
+  section?: string;
+  rubric_breakdown?: RubricBreakdownItem[];
+  errors?: GradingErrorItem[];
+  feedback?: string;
+  student_final_answer?: string;
+  expected_final_answer?: string;
+  needs_review?: boolean;
+  teacher_override?: TeacherOverride;
 };
 
 export type OmrItem = {
@@ -76,6 +107,8 @@ export type EvaluationResult = {
   summary: string;
   aiText?: string;
   warning?: string;
+  needsReviewCount?: number;
+  sectionScores?: Record<string, { awarded: number; max: number }>;
 };
 
 export type CustomOmrResult = {

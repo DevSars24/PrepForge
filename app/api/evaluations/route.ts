@@ -1,4 +1,4 @@
-import { listRecentEvaluations, deleteHistoryItem, clearAllHistory } from "@/lib/evaluation-store";
+import { listRecentEvaluations, deleteHistoryItem, clearAllHistory, updateEvaluationOverride } from "@/lib/evaluation-store";
 import { errorResponse, normalizeError } from "@/lib/debug";
 
 export async function GET() {
@@ -7,6 +7,31 @@ export async function GET() {
     return Response.json({ records });
   } catch (error) {
     return errorResponse(normalizeError(error, { kind: "api_error", component: "evaluations.GET" }));
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, question_no, original_marks, new_marks, teacher_name, reason, updatedResult } = body;
+
+    if (new_marks === undefined || !updatedResult) {
+      return Response.json({ error: "Missing required override data" }, { status: 400 });
+    }
+
+    const ok = await updateEvaluationOverride({
+      id,
+      question_no: question_no || "Question",
+      original_marks: Number(original_marks ?? 0),
+      new_marks: Number(new_marks),
+      teacher_name: teacher_name || "Faculty",
+      reason,
+      updatedResult,
+    });
+
+    return Response.json({ success: ok });
+  } catch (error) {
+    return errorResponse(normalizeError(error, { kind: "api_error", component: "evaluations.PATCH" }));
   }
 }
 
@@ -32,3 +57,4 @@ export async function DELETE(req: Request) {
     return errorResponse(normalizeError(error, { kind: "api_error", component: "evaluations.DELETE" }));
   }
 }
+

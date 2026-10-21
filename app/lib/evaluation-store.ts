@@ -352,3 +352,53 @@ export async function clearAllHistory() {
     return false;
   }
 }
+
+export async function updateEvaluationOverride(params: {
+  id?: string;
+  question_no: string;
+  original_marks: number;
+  new_marks: number;
+  teacher_name?: string;
+  reason?: string;
+  updatedResult: EvaluationResult;
+}): Promise<boolean> {
+  const auditNote = `Teacher override for ${params.question_no}: ${params.original_marks} -> ${params.new_marks} by ${params.teacher_name || "Faculty"}`;
+  console.log(`[PrepForge:store] ${auditNote}`);
+
+  if (params.id && process.env.DATABASE_URL) {
+    try {
+      const prisma = await getPrisma();
+      await prisma.evaluationRecord.update({
+        where: { id: params.id },
+        data: {
+          score: params.updatedResult.score,
+          total: params.updatedResult.total,
+          resultJson: params.updatedResult as unknown as object,
+        },
+      });
+      return true;
+    } catch (dbError) {
+      console.warn("[PrepForge:store] Prisma DB update override failed, falling back to local history:", dbError);
+    }
+  }
+
+  try {
+    const history = await getLocalHistory();
+    const record = params.id
+      ? history.evaluations.find((x) => x.id === params.id)
+      : history.evaluations[0];
+
+    if (record) {
+      record.score = params.updatedResult.score;
+      record.total = params.updatedResult.total;
+      record.resultJson = params.updatedResult;
+      await saveLocalHistory(history);
+      return true;
+    }
+  } catch (error) {
+    console.error("Failed to update evaluation override locally:", error);
+  }
+
+  return false;
+}
+
