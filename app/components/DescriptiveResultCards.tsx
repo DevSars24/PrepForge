@@ -16,6 +16,7 @@ import {
 import type { EvaluationResult, StepGrade } from "@/lib/evaluation";
 import { sanitizeMath } from "@/lib/sanitizeMath";
 import { isFalseDeductionError } from "@/lib/gradingGuardrails";
+import StudentSummaryAudio from "@/components/StudentSummaryAudio";
 
 interface Props {
   result: EvaluationResult;
@@ -390,6 +391,8 @@ export default function DescriptiveResultCards({
           {overrideFeedback}
         </div>
       )}
+
+      <StudentSummaryAudio result={result} />
 
       {/* ── QUESTION RESULT CARDS ────────────────────────────────────── */}
       {displayedGrades.map((grade, index) => {

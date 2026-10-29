@@ -34,3 +34,4 @@ __pycache__/
 *.pyc
 *.tsbuildinfo
 prisma/local_history.json
+.clerk/
