@@ -9,6 +9,7 @@ import gsap from "gsap";
 const navLinks = [
   { label: "Features", href: "/#features" },
   { label: "How It Works", href: "/#workflow" },
+  { label: "Feedback", href: "/#feedback" },
 ];
 
 export default function Navbar() {
@@ -39,10 +40,10 @@ export default function Navbar() {
     <header
       ref={headerRef}
       style={{ opacity: 0 }}
-      className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 sm:px-6 md:px-12 transition-all duration-300 ${
+      className={`navbar-shell fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4 sm:px-6 md:px-12 transition-all duration-300 ${
         scrolled
-          ? "bg-white/95 border-b border-slate-100 shadow-sm backdrop-blur-sm"
-          : "bg-white border-b border-transparent"
+          ? "border-b border-slate-200/70 shadow-sm"
+          : "border-b border-transparent"
       }`}
     >
       <Link href="/" className="flex items-center gap-2.5 font-bold text-xl text-slate-900 group">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
 import {
@@ -13,13 +13,13 @@ import {
   CheckCircle2,
   ChevronDown,
   BookOpen,
-  Quote,
   Sparkles,
 } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { TextPlugin } from "gsap/TextPlugin";
 import { AnimatePresence, motion } from "framer-motion";
+import FeedbackSection from "@/components/FeedbackSection";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, TextPlugin);
@@ -80,27 +80,6 @@ const stepsList = [
     num: "04",
     title: "Review AI Report",
     desc: "Get an instantaneous, citation-backed grading report mapping scores, anomalies, concept gaps, and recommendations.",
-  },
-];
-
-const testimonialsList = [
-  {
-    quote:
-      "PrepForge reduced our weekly descriptive grading cycle from three days of manual work to under twenty minutes. The step-wise citation system makes it easy for us to verify every single marked answer.",
-    author: "Dr. Ramesh Iyer",
-    role: "Senior Physics Faculty, FIITJEE",
-  },
-  {
-    quote:
-      "Our institute processed thousands of OMR bubble sheets last month. The anomaly detection is incredibly accurate, automatically highlighting faint shading errors that standard scanners completely missed.",
-    author: "Prof. Anjali Sen",
-    role: "HOD Chemistry, Allen Career Institute",
-  },
-  {
-    quote:
-      "Finally, an AI grading system that doesn't just output a single arbitrary number. PrepForge provides clear, NCERT-aligned explanations for every deduction, which helps our students target exactly what to revise.",
-    author: "Maths & Science Coordinator",
-    role: "Sri Chaitanya Academy",
   },
 ];
 
@@ -443,7 +422,7 @@ export default function CleanPremiumLanding() {
   useEffect(() => {
     if (!testimonialsGridRef.current) return;
     const cards =
-      testimonialsGridRef.current.querySelectorAll(".testi-card");
+      testimonialsGridRef.current.querySelectorAll(".feedback-sample");
     gsap.fromTo(
       cards,
       { opacity: 0, y: 36, scale: 0.96 },
@@ -524,13 +503,10 @@ export default function CleanPremiumLanding() {
   }, []);
 
   // Hero headline words
-  const heroWords =
-    "AI-powered answer sheet grading and OMR evaluation for educators.".split(
-      " "
-    );
+  const heroWords = "Give every answer the attention it deserves.".split(" ");
 
   return (
-    <div className="bg-white text-slate-900 min-h-screen font-sans selection:bg-[#7C3AED]/10 selection:text-[#7C3AED] overflow-x-hidden">
+    <div className="landing-page bg-white text-slate-900 min-h-screen font-sans selection:bg-[#7C3AED]/10 selection:text-[#7C3AED] overflow-x-hidden">
       <Navbar />
 
       {/* ─────────────────────────────────────────────────────────────────────
@@ -538,82 +514,128 @@ export default function CleanPremiumLanding() {
           ───────────────────────────────────────────────────────────────────── */}
       <section
         ref={heroRef}
-        className="relative bg-white flex flex-col items-center text-center overflow-hidden w-full pt-28 pb-16 sm:pt-36 sm:pb-24 px-4 sm:px-6 md:px-8"
+        className="landing-hero relative overflow-hidden w-full pt-28 pb-16 sm:pt-36 sm:pb-24 px-4 sm:px-6 md:px-8"
       >
-        {/* Ambient glow blobs */}
-        <div
-          className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(124,58,237,0.05) 0%, transparent 70%)",
-          }}
-        />
+        <div className="hero-grain" aria-hidden="true" />
+        <div className="hero-layout relative z-10 mx-auto w-full">
+          <div className="hero-copy">
+            <div
+              ref={badgeRef}
+              style={{ opacity: 0 }}
+              className="hero-badge inline-flex items-center gap-2 mb-6"
+            >
+              <span className="hero-badge-dot" />
+              A calmer way to grade
+            </div>
 
-        <div className="max-w-4xl z-10 flex flex-col items-center w-full">
-          {/* Badge */}
-          <div
-            ref={badgeRef}
-            style={{ opacity: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-slate-100 bg-slate-50 text-[#7C3AED] text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm"
-          >
-            <Sparkles size={13} className="text-[#7C3AED]" />
-            AI Evaluation Console
+            <h1
+              ref={h1Ref}
+              className="hero-title mb-6"
+              style={{ perspective: "600px" }}
+            >
+              {heroWords.map((word, i) => (
+                <Fragment key={i}>
+                  <span
+                    className={`hero-word${word === "attention" ? " hero-word-accent" : ""}`}
+                    style={{ opacity: 0 }}
+                  >
+                    {word}
+                  </span>
+                  {i < heroWords.length - 1 ? " " : null}
+                </Fragment>
+              ))}
+            </h1>
+
+            <p
+              ref={subRef}
+              style={{ opacity: 0 }}
+              className="hero-description mb-8"
+            >
+              Spend less time sorting through scripts and more time helping
+              students move forward. Review descriptive answers and OMR sheets
+              with clear, evidence-led feedback.
+            </p>
+
+            <div
+              ref={ctaRef}
+              style={{ opacity: 0 }}
+              className="hero-actions flex flex-col sm:flex-row gap-3"
+            >
+              <Link href={consoleHref} className="hero-primary group">
+                Open faculty console
+                <ArrowRight
+                  size={17}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </Link>
+              <Link href="#features" className="hero-secondary">
+                See how it works
+              </Link>
+            </div>
+
+            <div className="hero-assurance mt-8">
+              <span><CheckCircle2 size={15} /> Descriptive answer review</span>
+              <span><CheckCircle2 size={15} /> OMR verification</span>
+            </div>
           </div>
 
-          {/* Word-by-word H1 */}
-          <h1
-            ref={h1Ref}
-            className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0F172A] leading-[1.2] mb-6 max-w-3xl w-full"
-            style={{ perspective: "600px" }}
-          >
-            {heroWords.map((word, i) => (
-              <span
-                key={i}
-                className="hero-word inline-block mr-[0.25em] last:mr-0"
-                style={{ opacity: 0, display: "inline-block" }}
-              >
-                {word}
-              </span>
-            ))}
-          </h1>
-
-          {/* Subtext */}
-          <p
-            ref={subRef}
-            style={{ opacity: 0 }}
-            className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed mb-10 w-full"
-          >
-            Streamline step-by-step descriptive exam marking and bubble-sheet
-            verification. Grade handwriting with citation audits, map conceptual
-            syllabus gaps, and reclaim valuable prep hours.
-          </p>
-
-          {/* CTA Buttons */}
           <div
-            ref={ctaRef}
-            style={{ opacity: 0 }}
-            className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full"
+            className="hero-visual"
+            role="img"
+            aria-label="Illustration of an answer sheet with a step-by-step evaluation report"
           >
-            <Link
-              href={consoleHref}
-              className="group relative w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl font-bold text-base shadow-[0_4px_14px_rgba(124,58,237,0.28)] hover:shadow-[0_8px_28px_rgba(124,58,237,0.4)] transition-all flex items-center justify-center gap-2 overflow-hidden cursor-pointer"
-              style={{ transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)" }}
-            >
-              <span className="relative z-10">Open Faculty Console</span>
-              <ArrowRight
-                size={18}
-                className="relative z-10 transform group-hover:translate-x-1 transition-transform duration-200"
-              />
-              {/* shimmer */}
-              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-500 ease-in-out bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-            </Link>
-            <Link
-              href="#features"
-              className="w-full sm:w-auto text-center px-6 sm:px-8 py-3.5 sm:py-4 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-xl font-bold text-base shadow-sm transition-all cursor-pointer hover:-translate-y-0.5"
-              style={{ transition: "all 0.2s ease" }}
-            >
-              Explore Features
-            </Link>
+            <div className="hero-orbit hero-orbit-one" />
+            <div className="hero-orbit hero-orbit-two" />
+            <div className="hero-spark hero-spark-one" />
+            <div className="hero-spark hero-spark-two" />
+            <div className="hero-preview">
+              <div className="preview-topbar">
+                <div className="preview-brand">
+                  <span className="preview-brand-mark"><FileText size={15} /></span>
+                  <span>Answer review</span>
+                </div>
+                <span className="preview-status"><span /> Reviewed</span>
+              </div>
+              <div className="preview-meta">
+                <div>
+                  <span className="preview-kicker">PHYSICS · QUESTION 04</span>
+                  <strong>Work, energy &amp; power</strong>
+                </div>
+                <span className="preview-page">Page 02 / 08</span>
+              </div>
+              <div className="preview-content">
+                <div className="answer-sheet">
+                  <div className="answer-sheet-head"><span>STUDENT RESPONSE</span><span>04</span></div>
+                  <p>A force acts on a body as it moves through a distance.</p>
+                  <div className="answer-equation">W = F · s = 12 × 3</div>
+                  <div className="answer-line answer-line-long" />
+                  <div className="answer-line" />
+                  <div className="answer-line answer-line-short" />
+                  <div className="answer-mark"><CheckCircle2 size={14} /> Correct method</div>
+                </div>
+                <div className="evaluation-card">
+                  <span className="preview-kicker">QUESTION SCORE</span>
+                  <div className="score-row"><strong>2.5</strong><span>/ 3 marks</span></div>
+                  <div className="score-track"><span /></div>
+                  <div className="evaluation-note">
+                    <span className="evaluation-note-icon"><CheckCircle2 size={14} /></span>
+                    <p><strong>Good reasoning</strong><br />Correct formula and substitution.</p>
+                  </div>
+                  <div className="evaluation-note evaluation-note-muted">
+                    <span className="evaluation-note-icon">½</span>
+                    <p><strong>Small deduction</strong><br />Final unit not included.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="preview-footer">
+                <span><Sparkles size={14} /> Evidence-linked feedback</span>
+                <span>Updated just now</span>
+              </div>
+            </div>
+            <div className="hero-float-card">
+              <span className="float-icon"><BarChart3 size={16} /></span>
+              <span><strong>Clear at a glance</strong><small>Marks with context</small></span>
+            </div>
           </div>
         </div>
       </section>
@@ -622,7 +644,7 @@ export default function CleanPremiumLanding() {
           2. FEATURES
           ───────────────────────────────────────────────────────────────────── */}
       <section
-        className="max-w-7xl mx-auto border-t border-slate-100 bg-white w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
+        className="landing-features max-w-7xl mx-auto border-t border-slate-100 bg-white w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
         id="features"
       >
         <div className="section-heading text-center max-w-2xl mx-auto mb-16 w-full" style={{ opacity: 0 }}>
@@ -949,74 +971,11 @@ export default function CleanPremiumLanding() {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────────
-          6. TESTIMONIALS
+          6. DEMO FEEDBACK & USER INPUT
           ───────────────────────────────────────────────────────────────────── */}
-      <section
-        className="bg-white w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
-        id="testimonials"
-      >
-        <div className="max-w-7xl mx-auto w-full">
-          <div
-            className="section-heading text-center max-w-2xl mx-auto mb-16 w-full"
-            style={{ opacity: 0 }}
-          >
-            <h2 className="text-xs font-bold text-[#7C3AED] uppercase tracking-widest mb-3">
-              Feedback
-            </h2>
-            <h3 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">
-              Trusted by Faculty
-            </h3>
-          </div>
-
-          <div
-            ref={testimonialsGridRef}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full"
-          >
-            {testimonialsList.map((t, i) => (
-              <div
-                key={i}
-                className="testi-card group border border-slate-200/80 p-6 sm:p-8 md:p-10 rounded-2xl bg-white shadow-[0_4px_25px_-5px_rgba(15,23,42,0.03)] flex flex-col justify-between cursor-default"
-                style={{
-                  opacity: 0,
-                  transition: "border-color 0.25s ease, box-shadow 0.25s ease, transform 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  gsap.to(e.currentTarget, {
-                    y: -5,
-                    boxShadow: "0 16px 40px rgba(124,58,237,0.08)",
-                    duration: 0.3,
-                    ease: "power2.out",
-                  });
-                }}
-                onMouseLeave={(e) => {
-                  gsap.to(e.currentTarget, {
-                    y: 0,
-                    boxShadow: "0 4px 25px -5px rgba(15,23,42,0.03)",
-                    duration: 0.35,
-                    ease: "power2.out",
-                  });
-                }}
-              >
-                <div>
-                  <Quote
-                    size={28}
-                    className="text-[#7C3AED]/10 mb-6 group-hover:text-[#7C3AED]/20 transition-colors duration-300"
-                  />
-                  <p className="text-slate-600 text-sm md:text-base leading-relaxed italic mb-8 whitespace-normal">
-                    &ldquo;{t.quote}&rdquo;
-                  </p>
-                </div>
-                <div className="pt-6 border-t border-slate-100 w-full mt-4">
-                  <h5 className="font-bold text-[#0F172A] text-sm md:text-base">
-                    {t.author}
-                  </h5>
-                  <p className="text-xs text-slate-400 mt-1">{t.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <div ref={testimonialsGridRef}>
+        <FeedbackSection />
+      </div>
 
       {/* ─────────────────────────────────────────────────────────────────────
           7. PRICING — enlarged cards
